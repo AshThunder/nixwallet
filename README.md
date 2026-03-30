@@ -2,7 +2,7 @@
 
 A confidential browser wallet built on the **Fhenix network**, powered by **Fully Homomorphic Encryption (FHE)**.
 
-NixWallet is a Self Custodial that allows users to manage encrypted tokens, send and receive assets, and interact with the Fhenix ecosystem — all from within the browser.
+NixWallet is a self-custodial wallet that allows users to manage encrypted tokens, send and receive assets, and interact with the Fhenix ecosystem — all from within the browser.
 
 ---
 

@@ -1,0 +1,117 @@
+@import "tailwindcss";
+
+@theme {
+  --font-brand: "Space Grotesk", sans-serif;
+  --color-brand-cyan: #0AD9DC;
+  --color-brand-midnight: #001623;
+  --color-brand-navy: #06283C;
+}
+
+:root {
+  /* Clean Tech (Light) - Default */
+  --bg-app: #ffffff;
+  --bg-panel: #f8fafc;
+  --bg-surface: rgba(0, 0, 0, 0.03);
+  --bg-input: rgba(0, 0, 0, 0.05);
+  --bg-private: rgba(10, 217, 220, 0.08);
+  --text-main: #020617;
+  --text-sub: #1e293b;
+  --text-muted: #334155;
+  --border-ui: #cbd5e1;
+  --grid-line: rgba(10, 217, 220, 0.07);
+  --accent-cyan: #0AD9DC;
+  --card-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+.dark {
+  /* Technical Noir (Dark) */
+  --bg-app: #001623;
+  --bg-panel: #001C2C;
+  --bg-surface: rgba(255, 255, 255, 0.05);
+  --bg-input: rgba(255, 255, 255, 0.08);
+  --bg-private: rgba(10, 217, 220, 0.02);
+  --text-main: #ffffff;
+  --text-sub: #e2e8f0;
+  --text-muted: #cbd5e1;
+  --border-ui: rgba(255, 255, 255, 0.15);
+  --grid-line: rgba(10, 217, 220, 0.1);
+  --accent-cyan: #0AD9DC;
+  --card-shadow: none;
+}
+
+@layer base {
+  body {
+    background-color: var(--bg-app);
+    color: var(--text-main);
+    font-family: Inter, system-ui, sans-serif;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+  
+  /* Force 0px corners globally */
+  * {
+    border-radius: 0px !important;
+  }
+}
+
+@layer utilities {
+  .no-radius {
+    border-radius: 0px !important;
+  }
+
+  .glow-cyan {
+    box-shadow: 0px 0px 20px rgba(10, 217, 220, 0.2);
+  }
+
+  .text-label-caps {
+    font-family: 'Space Grotesk', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+
+  .bg-grid {
+    background-image: linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+                      linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+
+  .text-bg-number {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 8rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--text-main);
+    opacity: 0.03;
+    user-select: none;
+    pointer-events: none;
+  }
+
+  .glow-text-cyan {
+    text-shadow: 0 0 10px rgba(10, 217, 220, 0.5);
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* Theme-aware backgrounds */
+  .bg-app { background-color: var(--bg-app); }
+  .bg-panel { background-color: var(--bg-panel); }
+  .bg-surface { background-color: var(--bg-surface); }
+  .bg-input-field { background-color: var(--bg-input); }
+  .bg-private { background-color: var(--bg-private); }
+  
+  /* Theme-aware borders */
+  .border-ui { border-color: var(--border-ui); }
+  
+  /* Theme-aware text */
+  .text-main { color: var(--text-main); }
+  .text-sub { color: var(--text-sub); }
+  .text-muted { color: var(--text-muted); }
+}

@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NixWallet — Presentation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg: #020617;
+            --surface: #0f172a;
+            --border: rgba(255,255,255,0.08);
+            --cyan: #22d3ee;
+            --cyan-dim: rgba(34,211,238,0.12);
+            --cyan-glow: rgba(34,211,238,0.35);
+            --white: #f8fafc;
+            --sub: #94a3b8;
+            --muted: #475569;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--white);
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            width: 100vw; height: 100vh;
+            cursor: default;
+            user-select: none;
+        }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+
+        /* ── Slide Container ─────────────── */
+        #deck {
+            position: relative;
+            width: 100%; height: 100%;
+        }
+        .slide {
+            position: absolute; inset: 0;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            padding: 4rem 6rem;
+            opacity: 0;
+            transform: translateX(60px);
+            transition: opacity 0.5s cubic-bezier(.16,1,.3,1), transform 0.5s cubic-bezier(.16,1,.3,1);
+            pointer-events: none;
+            z-index: 0;
+        }
+        .slide.active {
+            opacity: 1; transform: translateX(0);
+            pointer-events: auto; z-index: 1;
+        }
+        .slide.exiting {
+            opacity: 0; transform: translateX(-60px);
+        }
+
+        /* ── Global Glow ─────────────────── */
+        .glow {
+            position: fixed; z-index: 0;
+            width: 700px; height: 700px;
+            border-radius: 50%;
+            background: radial-gradient(circle, var(--cyan-glow) 0%, transparent 60%);
+            filter: blur(120px); opacity: 0.25;
+            pointer-events: none;
+        }
+        .glow-1 { top: -200px; right: -200px; }
+        .glow-2 { bottom: -200px; left: -200px; opacity: 0.15; }
+
+        /* ── Slide Typography ────────────── */
+        .slide-label {
+            font-size: 1rem; font-weight: 700;
+            letter-spacing: 0.3em; text-transform: uppercase;
+            color: var(--cyan); margin-bottom: 1.5rem;
+        }
+        .slide h1 {
+            font-size: clamp(3rem, 8vw, 6rem);
+            font-weight: 900; letter-spacing: -0.06em;
+            text-transform: uppercase; line-height: 0.95;
+            text-align: center;
+        }
+        .slide h1 span { color: var(--cyan); text-shadow: 0 0 40px var(--cyan-glow); }
+        .slide h2 {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-weight: 900; letter-spacing: -0.04em;
+            line-height: 1.1; text-align: center;
+            margin-bottom: 1.5rem;
+        }
+        .slide p {
+            font-size: 1.2rem; color: var(--sub);
+            max-width: 700px; text-align: center;
+            line-height: 1.7;
+        }
+        .slide p strong { color: var(--white); }
+
+        /* ── Feature List ────────────────── */
+        .feature-list {
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 1rem; margin-top: 2rem;
+            max-width: 800px; width: 100%;
+        }
+        .fl-item {
+            display: flex; align-items: center; gap: 1rem;
+            background: var(--surface); border: 1px solid var(--border);
+            padding: 1.2rem 1.5rem;
+            transition: border-color 0.3s;
+        }
+        .fl-item:hover { border-color: rgba(34,211,238,0.3); }
+        .fl-dot {
+            width: 10px; height: 10px; flex-shrink: 0;
+            background: var(--cyan); border-radius: 2px;
+        }
+        .fl-dot.soon { background: var(--muted); }
+        .fl-item span { font-size: 0.95rem; font-weight: 600; }
+        .fl-badge {
+            margin-left: auto; font-size: 0.6rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.1em;
+            color: var(--muted); border: 1px solid var(--border);
+            padding: 0.2rem 0.5rem;
+        }
+
+        /* ── Tech Pills ──────────────────── */
+        .pill-row {
+            display: flex; flex-wrap: wrap; gap: 0.8rem;
+            justify-content: center; margin-top: 2rem;
+            max-width: 700px;
+        }
+        .pill {
+            padding: 0.7rem 1.3rem;
+            background: var(--surface); border: 1px solid var(--border);
+            font-size: 0.85rem; font-weight: 600;
+        }
+
+        /* ── Stats Row ───────────────────── */
+        .stats {
+            display: flex; gap: 1px; margin-top: 2.5rem;
+            background: var(--border); border: 1px solid var(--border);
+        }
+        .stat {
+            background: var(--surface); padding: 2rem 3rem;
+            text-align: center;
+        }
+        .stat .num {
+            font-size: 2.5rem; font-weight: 900;
+            color: var(--cyan); letter-spacing: -0.04em; line-height: 1;
+        }
+        .stat .lbl {
+            font-size: 0.7rem; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 0.15em;
+            color: var(--sub); margin-top: 0.4rem;
+        }
+
+        /* ── Quote ───────────────────────── */
+        .quote {
+            font-size: 1.6rem; font-weight: 300;
+            font-style: italic; color: var(--sub);
+            max-width: 650px; text-align: center;
+            line-height: 1.7; border-left: 3px solid var(--cyan);
+            padding-left: 2rem; text-align: left;
+        }
+        .quote strong { color: var(--cyan); font-style: normal; font-weight: 700; }
+
+        /* ── Links ────────────────────────── */
+        .link-row {
+            display: flex; gap: 1rem; margin-top: 2rem;
+            flex-wrap: wrap; justify-content: center;
+        }
+        .link-row a {
+            padding: 0.8rem 1.5rem; font-size: 0.85rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.08em;
+            text-decoration: none; transition: all 0.3s;
+            border: 1px solid var(--border); color: var(--sub);
+        }
+        .link-row a:hover { border-color: var(--cyan); color: var(--cyan); }
+        .link-row a.primary {
+            background: var(--cyan); color: var(--bg); border-color: var(--cyan);
+            box-shadow: 0 0 15px var(--cyan-glow);
+        }
+
+        /* ── Progress Bar ────────────────── */
+        #progress {
+            position: fixed; bottom: 0; left: 0;
+            height: 3px; background: var(--cyan);
+            transition: width 0.4s ease; z-index: 100;
+            box-shadow: 0 0 10px var(--cyan-glow);
+        }
+
+        /* ── Slide Counter ───────────────── */
+        #counter {
+            position: fixed; bottom: 1.5rem; right: 2rem;
+            font-size: 0.75rem; color: var(--muted);
+            letter-spacing: 0.1em; z-index: 100;
+        }
+
+        /* ── Nav Hint ────────────────────── */
+        #nav-hint {
+            position: fixed; bottom: 1.5rem; left: 2rem;
+            font-size: 0.65rem; color: var(--muted);
+            letter-spacing: 0.1em; text-transform: uppercase;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+
+<div class="glow glow-1"></div>
+<div class="glow glow-2"></div>
+
+<div id="deck">
+
+    <!-- SLIDE 1: Title -->
+    <div class="slide active" data-slide="0">
+        <div class="slide-label mono">Chrome Extension Wallet</div>
+        <h1>NIX<span>WALLET</span></h1>
+        <p style="margin-top: 1.5rem;">A confidential browser wallet built on the Fhenix network, powered by Fully Homomorphic Encryption.</p>
+    </div>
+
+    <!-- SLIDE 2: The Problem -->
+    <div class="slide" data-slide="1">
+        <div class="slide-label mono">The Problem</div>
+        <h2>On-Chain Data Is Public</h2>
+        <p>Most wallets today expose your balance, your transfers, and your activity on a public ledger. <strong>Anyone can look it up.</strong> There's no built-in confidentiality layer for EVM users.</p>
+    </div>
+
+    <!-- SLIDE 3: The Solution -->
+    <div class="slide" data-slide="2">
+        <div class="slide-label mono">The Solution</div>
+        <h2>Compute On <span style="color:var(--cyan)">Encrypted Data</span></h2>
+        <p>Fhenix uses <strong>Fully Homomorphic Encryption (FHE)</strong> — smart contracts can process your tokens without exposing the underlying data. NixWallet brings this directly to your browser.</p>
+    </div>
+
+    <!-- SLIDE 4: What It Does -->
+    <div class="slide" data-slide="3">
+        <div class="slide-label mono">Core Features</div>
+        <h2>What NixWallet Does</h2>
+        <div class="feature-list">
+            <div class="fl-item"><div class="fl-dot"></div><span>FHE Token Wrapping</span></div>
+            <div class="fl-item"><div class="fl-dot"></div><span>Send & Receive</span></div>
+            <div class="fl-item"><div class="fl-dot"></div><span>Multi-Account HD Wallet</span></div>
+            <div class="fl-item"><div class="fl-dot"></div><span>Multi-Network Support</span></div>
+            <div class="fl-item"><div class="fl-dot"></div><span>Address Book</span></div>
+            <div class="fl-item"><div class="fl-dot"></div><span>dApp Discovery</span></div>
+            <div class="fl-item"><div class="fl-dot soon"></div><span>In-Wallet Swaps</span><div class="fl-badge mono">Soon</div></div>
+            <div class="fl-item"><div class="fl-dot soon"></div><span>DApp Manager</span><div class="fl-badge mono">Soon</div></div>
+        </div>
+    </div>
+
+    <!-- SLIDE 5: Tech Stack -->
+    <div class="slide" data-slide="4">
+        <div class="slide-label mono">Under The Hood</div>
+        <h2>Built With</h2>
+        <div class="pill-row">
+            <div class="pill">React 19</div>
+            <div class="pill">TypeScript</div>
+            <div class="pill">Vite</div>
+            <div class="pill">Tailwind v4</div>
+            <div class="pill">CRXJS</div>
+            <div class="pill">Framer Motion</div>
+            <div class="pill">Fhenix coFHE SDK</div>
+            <div class="pill">ethers.js v6</div>
+            <div class="pill">fhenixjs</div>
+        </div>
+    </div>
+
+    <!-- SLIDE 6: Architecture -->
+    <div class="slide" data-slide="5">
+        <div class="slide-label mono">At A Glance</div>
+        <h2>Architecture</h2>
+        <p>Clean, unidirectional. Designed for extension constraints — fast renders, minimal storage, encrypted-first data flow.</p>
+        <div class="stats">
+            <div class="stat"><div class="num">12+</div><div class="lbl">Screens</div></div>
+            <div class="stat"><div class="num">3</div><div class="lbl">Networks</div></div>
+            <div class="stat"><div class="num">FHE</div><div class="lbl">Encryption</div></div>
+            <div class="stat"><div class="num">0</div><div class="lbl">External Servers</div></div>
+        </div>
+    </div>
+
+    <!-- SLIDE 7: Quote / Vision -->
+    <div class="slide" data-slide="6">
+        <div class="quote">
+            "NixWallet is a <strong>confidential browser wallet</strong> that lets you manage encrypted tokens on Fhenix — so your crypto stays yours."
+        </div>
+    </div>
+
+    <!-- SLIDE 8: Thank You / Links -->
+    <div class="slide" data-slide="7">
+        <div class="slide-label mono">Created by Chris Gold</div>
+        <h2>Thank You</h2>
+        <p style="margin-bottom: 0.5rem;">Let's connect.</p>
+        <div class="link-row">
+            <a href="https://github.com/AshThunder/nixwallet" target="_blank" class="primary">GitHub</a>
+            <a href="https://x.com/ChrisGold__" target="_blank">@ChrisGold__</a>
+            <a href="https://x.com/fhenix" target="_blank">@Fhenix</a>
+            <a href="https://fhenix.io" target="_blank">Fhenix.io</a>
+        </div>
+    </div>
+</div>
+
+<div id="progress" style="width: 12.5%"></div>
+<div id="counter" class="mono">1 / 8</div>
+<div id="nav-hint" class="mono">← → or click to navigate</div>
+
+<script>
+    const slides = document.querySelectorAll('.slide');
+    const total = slides.length;
+    let current = 0;
+
+    function goTo(n) {
+        if (n < 0 || n >= total || n === current) return;
+        slides[current].classList.remove('active');
+        slides[current].classList.add('exiting');
+        setTimeout(() => slides[current === 0 ? 0 : current].classList.remove('exiting'), 500);
+
+        const prev = current;
+        current = n;
+        slides[current].classList.add('active');
+
+        // Clean up previous after transition
+        setTimeout(() => slides[prev].classList.remove('exiting'), 500);
+
+        // Update progress
+        document.getElementById('progress').style.width = ((current + 1) / total * 100) + '%';
+        document.getElementById('counter').textContent = (current + 1) + ' / ' + total;
+    }
+
+    // Keyboard navigation
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter') { e.preventDefault(); goTo(current + 1); }
+        if (e.key === 'ArrowLeft' || e.key === 'Backspace') { e.preventDefault(); goTo(current - 1); }
+        if (e.key === 'Home') { e.preventDefault(); goTo(0); }
+        if (e.key === 'End') { e.preventDefault(); goTo(total - 1); }
+    });
+
+    // Click navigation (left half = back, right half = forward)
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('a')) return; // Don't intercept link clicks
+        if (e.clientX < window.innerWidth / 2) goTo(current - 1);
+        else goTo(current + 1);
+    });
+</script>
+
+</body>
+</html>

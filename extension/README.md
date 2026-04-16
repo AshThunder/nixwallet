@@ -1,73 +1,57 @@
-# React + TypeScript + Vite
+# NixWallet Chrome Extension
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+The Chrome extension frontend for NixWallet — a confidential wallet powered by Fhenix FHE.
 
-Currently, two official plugins are available:
+## Development
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev     # Start Vite dev server with HMR
+npm run build   # Production build to dist/
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Architecture
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+The extension is built with React 19, TypeScript, Tailwind CSS v4, and Vite. It runs as a Chrome Side Panel (Chrome 114+).
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `src/App.tsx` | Main router, vault lifecycle, auto-lock listener |
+| `src/background.ts` | Service worker: auto-lock timer, RPC proxy |
+| `public/manifest.json` | Extension manifest (side panel, permissions) |
+
+### Screens (`src/screens/`)
+
+| Screen | Description |
+|--------|-------------|
+| `Dashboard.tsx` | Token balances, activity feed, account picker |
+| `Send.tsx` | Public ETH/ERC-20 transfers and confidential FHERC20 transfers |
+| `WrapUnwrap.tsx` | Shield/unshield tokens via FHERC20 wrappers, batch claim |
+| `Receive.tsx` | QR code and address display |
+| `ManageTokens.tsx` | Add/remove custom ERC-20 tokens |
+| `Settings.tsx` | Security, address book, networks, about |
+| `Onboarding.tsx` | Wallet creation and seed phrase backup |
+| `Unlock.tsx` | Password entry for vault decryption |
+| `Swap.tsx` | Coming Soon placeholder |
+| `Dapps.tsx` | Coming Soon placeholder |
+| `Discover.tsx` | Ecosystem links |
+
+### Libraries (`src/lib/`)
+
+| Module | Purpose |
+|--------|---------|
+| `vault.ts` | AES-GCM vault encryption, session cache |
+| `wallet.ts` | HD derivation, signer creation, network config |
+| `cofhe.ts` | coFHE SDK wrapper (encrypt, decryptForView, decryptForTx) |
+| `contracts.ts` | FHERC20 registry + wrapper interaction helpers |
+| `contacts.ts` | Unified address book (shared by Send + Settings) |
+| `activity.ts` | Transaction history storage and retrieval |
+
+## Loading in Chrome
+
+1. Run `npm run build`
+2. Open `chrome://extensions/` with Developer mode enabled
+3. Click **Load unpacked** and select the `dist/` folder
+4. Click the NixWallet icon — the wallet opens in the side panel

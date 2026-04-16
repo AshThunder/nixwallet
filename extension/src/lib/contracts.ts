@@ -1,92 +1,145 @@
 /**
- * Contract interaction helpers for ConfidentialWrapper
+ * Contract interaction helpers for FHERC20 ERC20 wrappers.
+ *
+ * Uses an on-chain FHERC20WrapperRegistry that auto-deploys one wrapper
+ * per underlying ERC-20 the first time anyone interacts with it.
  */
 import { ethers } from 'ethers';
 
-// ABI for the ConfidentialWrapper contract (coFHE version)
+// ABI for FHERC20 ERC20 wrapper contracts
 export const WRAPPER_ABI = [
-  'function wrap(address token, uint128 amount) external',
-  'function requestUnwrap(address token, tuple(uint256 ctHash, uint8 securityZone, uint8 utype, bytes signature) encryptedAmount) external',
-  'function finalizeUnwrap(address token, bytes32 ctHash, uint256 decryptedValue, bytes signature) external',
-  'function transferEncrypted(address token, address to, tuple(uint256 ctHash, uint8 securityZone, uint8 utype, bytes signature) encryptedAmount) external',
-  'function getBalance(address token) external view returns (bytes32)',
-  'function getPendingUnwrap(address token) external view returns (bytes32)',
-  'event Wrapped(address indexed token, address indexed user, uint128 amount)',
-  'event UnwrapRequested(address indexed token, address indexed user)',
-  'event UnwrapFinalized(address indexed token, address indexed user, uint128 amount)',
-  'event ConfidentialTransfer(address indexed token, address indexed from, address indexed to)',
+  'function shield(address to, uint256 amount) external returns (bytes32)',
+  'function unshield(address from, address to, uint64 amount) external returns (bytes32)',
+  'function claimUnshielded(bytes32 unshieldRequestId, uint64 unshieldAmountCleartext, bytes decryptionProof) external',
+  'function claimUnshieldedBatch(bytes32[] unshieldRequestIds, uint64[] unshieldAmountCleartexts, bytes[] decryptionProofs) external',
+  'function confidentialTransfer(address to, tuple(uint256 ctHash, uint8 securityZone, uint8 utype, bytes signature) encryptedAmount) external returns (bytes32)',
+  'function confidentialBalanceOf(address account) external view returns (bytes32)',
+  'function getUserClaims(address user) external view returns ((address to, bytes32 ctHash, uint64 requestedAmount, uint64 decryptedAmount, bool claimed)[])',
+  'function rate() external view returns (uint256)',
 ] as const;
 
-// Contract addresses
-export const CONTRACTS: Record<string, string> = {
-  wrapper: '0xd169FD88Ef96942A4deBdAde364Ca38dD0575873', // Sepolia Deployment (euint128)
-  underlying: '0x05B84E1A04b93E6999b80323B1d0a52eDa99A7dC' // Mock ERC20 (Fresh)
-};
+export const REGISTRY_ABI = [
+  'function getWrapper(address underlying) external view returns (address)',
+  'function getOrCreateWrapper(address underlying) external returns (address)',
+  'function wrapperCount() external view returns (uint256)',
+] as const;
 
-export function setContractAddress(key: string, address: string) {
-  CONTRACTS[key] = address;
+// Set after deploying FHERC20WrapperRegistry to Sepolia
+export const REGISTRY_ADDRESS = '0xEE098B005e1B979Ca32ac427c367C343879e502C';
+
+// In-memory cache so we don't re-query the registry for the same token
+const _wrapperCache: Record<string, string> = {};
+
+/** Read-only lookup: returns the wrapper address or null if none deployed yet */
+export async function getWrapperAddress(provider: ethers.Provider, underlying: string): Promise<string | null> {
+  const key = underlying.toLowerCase();
+  if (_wrapperCache[key]) return _wrapperCache[key];
+
+  const registry = new ethers.Contract(REGISTRY_ADDRESS, REGISTRY_ABI, provider);
+  const addr: string = await registry.getWrapper(key);
+  if (addr === ethers.ZeroAddress) return null;
+
+  _wrapperCache[key] = addr;
+  return addr;
 }
 
-/** Get a ConfidentialWrapper contract instance */
-export function getWrapperContract(signer: ethers.Signer): ethers.Contract {
-  return new ethers.Contract(CONTRACTS.wrapper, WRAPPER_ABI, signer);
+/** Deploy wrapper via registry if it doesn't exist yet, then return its address */
+export async function getOrCreateWrapper(signer: ethers.Signer, underlying: string): Promise<string> {
+  const key = underlying.toLowerCase();
+  if (_wrapperCache[key]) return _wrapperCache[key];
+
+  const registry = new ethers.Contract(REGISTRY_ADDRESS, REGISTRY_ABI, signer);
+  const tx = await registry.getOrCreateWrapper(key);
+  await tx.wait();
+
+  const wrapper = await registry.getWrapper(key);
+  if (wrapper === ethers.ZeroAddress) throw new Error('Registry deploy failed');
+  _wrapperCache[key] = wrapper;
+  return wrapper;
 }
 
-/** Wrap public ERC20 into encrypted FHE balance */
-export async function wrapTokens(signer: ethers.Signer, tokenAddress: string, amount: bigint): Promise<ethers.ContractTransactionResponse> {
-  const underlying = new ethers.Contract(
-    tokenAddress,
+/** Get a wrapper contract instance (read-only lookup, throws if no wrapper yet) */
+export async function getWrapperContract(signerOrProvider: ethers.Signer | ethers.Provider, underlying: string): Promise<ethers.Contract> {
+  const provider = 'getAddress' in signerOrProvider
+    ? (signerOrProvider as ethers.Signer).provider!
+    : signerOrProvider as ethers.Provider;
+  const addr = await getWrapperAddress(provider, underlying);
+  if (!addr) throw new Error(`No FHERC20 wrapper deployed for ${underlying}`);
+  return new ethers.Contract(addr, WRAPPER_ABI, signerOrProvider);
+}
+
+/** Shield public ERC20 into confidential FHERC20 balance, auto-deploying the wrapper if needed */
+export async function shieldTokens(signer: ethers.Signer, underlying: string, to: string, amount: bigint): Promise<ethers.ContractTransactionResponse> {
+  const wrapperAddress = await getOrCreateWrapper(signer, underlying);
+
+  const token = new ethers.Contract(
+    underlying,
     ['function approve(address spender, uint256 amount) external returns (bool)'],
     signer
   );
-  const approveTx = await underlying.approve(CONTRACTS.wrapper, amount);
+  const approveTx = await token.approve(wrapperAddress, amount);
   await approveTx.wait();
 
-  const wrapper = getWrapperContract(signer);
-  return wrapper.wrap(tokenAddress, amount);
+  const wrapper = new ethers.Contract(wrapperAddress, WRAPPER_ABI, signer);
+  return wrapper.shield(to, amount);
 }
 
-/** Request unwrap (step 1 of 2) */
-export async function requestUnwrap(
+/** Request unshield (step 1) */
+export async function requestUnshield(
   signer: ethers.Signer,
-  tokenAddress: string,
-  encryptedAmount: any
+  underlying: string,
+  from: string,
+  to: string,
+  amount: bigint
 ): Promise<ethers.ContractTransactionResponse> {
-  const wrapper = getWrapperContract(signer);
-  return wrapper.requestUnwrap(tokenAddress, encryptedAmount);
+  const wrapper = await getWrapperContract(signer, underlying);
+  return wrapper.unshield(from, to, amount);
 }
 
-/** Finalize unwrap with decrypted value + signature (step 2 of 2) */
-export async function finalizeUnwrap(
+/** Claim unshield with decrypt proof (step 2) */
+export async function claimUnshield(
   signer: ethers.Signer,
-  tokenAddress: string,
-  ctHash: string,
+  underlying: string,
+  requestId: string,
   decryptedValue: bigint,
   signature: string
 ): Promise<ethers.ContractTransactionResponse> {
-  const wrapper = getWrapperContract(signer);
-  return wrapper.finalizeUnwrap(tokenAddress, ctHash, decryptedValue, signature);
+  const wrapper = await getWrapperContract(signer, underlying);
+  return wrapper.claimUnshielded(requestId, decryptedValue, signature);
 }
 
-/** Encrypted transfer to another address */
-export async function transferEncrypted(
+/** Batch claim multiple unshield requests in a single transaction */
+export async function batchClaimUnshield(
   signer: ethers.Signer,
-  tokenAddress: string,
-  to: string,
-  encryptedAmount: any
+  underlying: string,
+  requestIds: string[],
+  decryptedValues: bigint[],
+  signatures: string[]
 ): Promise<ethers.ContractTransactionResponse> {
-  const wrapper = getWrapperContract(signer);
-  return wrapper.transferEncrypted(tokenAddress, to, encryptedAmount);
+  const wrapper = await getWrapperContract(signer, underlying);
+  return wrapper.claimUnshieldedBatch(requestIds, decryptedValues, signatures);
 }
 
-/** Get encrypted balance ctHash */
-export async function getEncryptedBalance(signer: ethers.Signer, tokenAddress: string): Promise<string> {
-  const wrapper = getWrapperContract(signer);
-  return wrapper.getBalance(tokenAddress);
+/** Confidential transfer to another address */
+export async function confidentialTransfer(
+  signer: ethers.Signer,
+  underlying: string,
+  to: string,
+  encryptedAmount: unknown
+): Promise<ethers.ContractTransactionResponse> {
+  const wrapper = await getWrapperContract(signer, underlying);
+  return wrapper.confidentialTransfer(to, encryptedAmount);
 }
 
-/** Get pending unwrap ctHash */
-export async function getPendingUnwrap(signer: ethers.Signer, tokenAddress: string): Promise<string> {
-  const wrapper = getWrapperContract(signer);
-  return wrapper.getPendingUnwrap(tokenAddress);
+/** Get encrypted FHERC20 balance handle */
+export async function getEncryptedBalance(provider: ethers.Provider, underlying: string, account: string): Promise<string> {
+  const wrapper = await getWrapperContract(provider, underlying);
+  return wrapper.confidentialBalanceOf(account);
+}
+
+/** Return all pending claims for user */
+export async function getPendingClaims(provider: ethers.Provider, underlying: string, account: string): Promise<{ claimed: boolean; ctHash: string }[]> {
+  const wrapper = await getWrapperContract(provider, underlying);
+  const claims = await wrapper.getUserClaims(account);
+  return claims.filter((c: { claimed: boolean }) => !c.claimed);
 }

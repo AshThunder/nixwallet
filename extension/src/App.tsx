@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { isVaultInitialized, unlockVault, createVault, cacheSession, getSessionCache, clearSessionCache } from './lib/vault';
 import type { VaultData } from './lib/vault';
-import { getActiveNetwork, setActiveNetwork, loadNetwork, getAccountByIndex } from './lib/wallet';
+import { getActiveNetwork, setActiveNetwork, loadNetwork, getAccountByIndex, type NetworkId } from './lib/wallet';
 import Onboarding from './screens/Onboarding';
 import UnlockScreen from './screens/Unlock';
 import Dashboard from './screens/Dashboard';
@@ -24,47 +24,13 @@ function App() {
   const [accountIndex, setAccountIndex] = useState(0);
   const [importedAccounts, setImportedAccounts] = useState<{ address: string; privateKey: string; name?: string }[]>([]);
   const [network, setNetwork] = useState(getActiveNetwork());
-  const [selectedToken, setSelectedToken] = useState<{ symbol: string; address: string; decimals?: number } | null>(null);
+  const [selectedToken, setSelectedToken] = useState<{
+    symbol: string;
+    address: string;
+    decimals?: number;
+  } | null>(null);
 
-  useEffect(() => {
-    (async () => {
-      const initialized = await isVaultInitialized();
-      await loadNetwork();
-      
-      const res = await chrome.storage.local.get(['theme']);
-      if (res.theme === 'light' || res.theme === 'dark') setTheme(res.theme);
-      
-      setNetwork(getActiveNetwork());
-
-      // Try auto-unlock from session cache
-      if (initialized) {
-        const cached = await getSessionCache();
-        if (cached) {
-          await handleUnlock(cached);
-          return;
-        }
-      }
-
-      setScreen(initialized ? 'unlock' : 'onboarding');
-    })();
-  }, []);
-
-  useEffect(() => {
-    document.documentElement.className = theme;
-    chrome.storage.local.set({ theme });
-  }, [theme]);
-
-  const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
-
-  const handleOnboardingComplete = (addr: string) => {
-    // After onboarding, vault is created. Reload to go to unlock.
-    // Or we can auto-unlock by re-reading the wallet data.
-    setAddress(addr);
-    setScreen('unlock');
-  };
-
-  const handleUnlock = async (data: VaultData) => {
-    // Load persisted account index
+  const handleUnlock = useCallback(async (data: VaultData) => {
     let idx = 0;
     if (typeof chrome !== 'undefined' && chrome.storage) {
       const res = await chrome.storage.local.get(['activeAccountIndex']);
@@ -75,22 +41,20 @@ function App() {
     setMnemonic(data.mnemonic);
     setImportedAccounts(data.importedAccounts || []);
     
-    // Load persisted active account type
     let accountType = 'hd';
-    let activeAddress: string | null = null;
+    let activeAddr: string | null = null;
     if (typeof chrome !== 'undefined' && chrome.storage) {
       const res = await chrome.storage.local.get(['activeAccountType', 'activeAddress']);
       accountType = res.activeAccountType === 'imported' ? 'imported' : 'hd';
-      activeAddress = typeof res.activeAddress === 'string' ? res.activeAddress : null;
+      activeAddr = typeof res.activeAddress === 'string' ? res.activeAddress : null;
     }
 
-    if (accountType === 'imported' && activeAddress) {
-      const acc = (data.importedAccounts || []).find(a => a.address.toLowerCase() === activeAddress.toLowerCase());
+    if (accountType === 'imported' && activeAddr) {
+      const acc = (data.importedAccounts || []).find(a => a.address.toLowerCase() === activeAddr!.toLowerCase());
       if (acc) {
         setAddress(acc.address);
         setPrivateKey(acc.privateKey);
       } else {
-        // Fallback to HD if imported not found
         const { address: addr, privateKey: pk } = getAccountByIndex(data.mnemonic, idx);
         setAddress(addr);
         setPrivateKey(pk);
@@ -102,8 +66,64 @@ function App() {
     }
     setScreen('dashboard');
 
-    // Cache session so popup reopens don't need password
     await cacheSession(data);
+    chrome.runtime.sendMessage({ type: 'VAULT_UNLOCKED' }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      const initialized = await isVaultInitialized();
+      await loadNetwork();
+      
+      const res = await chrome.storage.local.get(['theme']);
+      if (res.theme === 'light' || res.theme === 'dark') setTheme(res.theme);
+      
+      setNetwork(getActiveNetwork());
+
+      if (initialized) {
+        const cached = await getSessionCache();
+        if (cached) {
+          await handleUnlock(cached);
+          return;
+        }
+      }
+
+      setScreen(initialized ? 'unlock' : 'onboarding');
+    })();
+  }, [handleUnlock]);
+
+  useEffect(() => {
+    const listener = (message: { type?: string }) => {
+      if (message?.type === 'VAULT_LOCKED') {
+        setPrivateKey('');
+        setMnemonic('');
+        clearSessionCache();
+        setScreen('unlock');
+      }
+    };
+    chrome.runtime.onMessage.addListener(listener);
+    return () => chrome.runtime.onMessage.removeListener(listener);
+  }, []);
+
+  useEffect(() => {
+    const resetTimer = () => {
+      chrome.runtime.sendMessage({ type: 'KEEP_ALIVE' }).catch(() => {});
+    };
+    const events = ['click', 'keydown', 'scroll', 'input'] as const;
+    events.forEach(e => window.addEventListener(e, resetTimer, { passive: true }));
+    return () => { events.forEach(e => window.removeEventListener(e, resetTimer)); };
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.className = theme;
+    chrome.storage.local.set({ theme });
+  }, [theme]);
+
+  const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
+
+  const handleOnboardingComplete = (addr: string) => {
+    setAddress(addr);
+    setScreen('unlock');
   };
 
   const handleAccountChange = (arg: number | string) => {
@@ -119,7 +139,7 @@ function App() {
       }
     } else {
       // Imported Account (arg is address)
-      const acc = importedAccounts.find((a: any) => a.address.toLowerCase() === arg.toLowerCase());
+      const acc = importedAccounts.find(a => a.address.toLowerCase() === arg.toLowerCase());
       if (acc) {
         setAddress(acc.address);
         setPrivateKey(acc.privateKey);
@@ -155,8 +175,7 @@ function App() {
         chrome.storage.local.set({ activeAccountType: 'imported', activeAddress: acc.address });
       }
       return true;
-    } catch (e) {
-      console.error('Import failed:', e);
+    } catch {
       return false;
     }
   };
@@ -165,6 +184,7 @@ function App() {
     setPrivateKey('');
     setMnemonic('');
     await clearSessionCache();
+    chrome.runtime.sendMessage({ type: 'VAULT_LOCKED' }).catch(() => {});
     setScreen('unlock');
   };
 
@@ -175,8 +195,8 @@ function App() {
     setScreen('onboarding');
   };
 
-  const handleNetworkChange = (id: any) => {
-    setActiveNetwork(id as any);
+  const handleNetworkChange = (id: string) => {
+    setActiveNetwork(id as NetworkId);
     setNetwork(getActiveNetwork());
     // Force re-render
     setScreen('dashboard');
@@ -184,7 +204,7 @@ function App() {
 
   if (screen === 'loading') {
     return (
-      <div className="w-[360px] h-[600px] bg-slate-950 flex items-center justify-center">
+      <div className="w-full min-h-screen bg-slate-950 flex items-center justify-center">
         <div className="w-6 h-6 border-2 border-brand-cyan border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -250,7 +270,7 @@ function App() {
       network={network}
       theme={theme}
       onToggleTheme={toggleTheme}
-      onNavigate={(s, tokenData?: any) => {
+      onNavigate={(s, tokenData) => {
         if (tokenData) setSelectedToken(tokenData);
         else setSelectedToken(null);
         setScreen(s as Screen);

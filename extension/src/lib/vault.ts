@@ -73,16 +73,15 @@ function hexToBuf(hex: string): Uint8Array {
 
 // ─── Storage Helpers ───
 
-function storageGet(key: string): Promise<any> {
+function storageGet(key: string): Promise<unknown> {
   if (typeof chrome !== 'undefined' && chrome.storage?.local) {
-    return new Promise(resolve => chrome.storage.local.get(key, (r: Record<string, any>) => resolve(r[key])));
+    return new Promise(resolve => chrome.storage.local.get(key, (r: Record<string, unknown>) => resolve(r[key])));
   }
-  // Fallback for dev/testing
   const val = localStorage.getItem(key);
   return Promise.resolve(val ? JSON.parse(val) : undefined);
 }
 
-function storageSet(key: string, value: any): Promise<void> {
+function storageSet(key: string, value: unknown): Promise<void> {
   if (typeof chrome !== 'undefined' && chrome.storage?.local) {
     return new Promise(resolve => chrome.storage.local.set({ [key]: value }, resolve));
   }
@@ -118,8 +117,8 @@ export async function createVault(data: VaultData, password: string): Promise<vo
 
 /** Unlock the vault with password, returns decrypted vault data */
 export async function unlockVault(password: string): Promise<VaultData> {
-  const saltHex = await storageGet(SALT_KEY);
-  const encrypted = await storageGet(VAULT_KEY);
+  const saltHex = await storageGet(SALT_KEY) as string | undefined;
+  const encrypted = await storageGet(VAULT_KEY) as { iv: string; ciphertext: string } | undefined;
 
   if (!saltHex || !encrypted) {
     throw new Error('Vault not initialized');
@@ -157,7 +156,7 @@ export async function cacheSession(data: VaultData): Promise<void> {
 export async function getSessionCache(): Promise<VaultData | null> {
   if (typeof chrome !== 'undefined' && chrome.storage?.session) {
     const res = await chrome.storage.session.get(SESSION_KEY);
-    const cached: any = res[SESSION_KEY];
+    const cached = res[SESSION_KEY] as VaultData | undefined;
     if (cached && cached.mnemonic && cached.privateKey) {
       return cached as VaultData;
     }

@@ -2,61 +2,91 @@
 
 ## Overview
 
-NixWallet is a Chrome extension wallet designed around a **unidirectional data flow** and **encrypted-first** storage model. The architecture prioritizes security, minimal surface area, and fast renders within the constraints of a browser extension popup (360×600px).
+NixWallet is a Chrome extension wallet designed around a **unidirectional data flow** and **encrypted-first** storage model. The architecture prioritizes security, minimal surface area, and responsive UI within the Chrome Side Panel.
 
 ```
-┌─────────────────────────────────────────────────┐
-│                   Chrome Extension               │
-│                                                   │
-│  ┌───────────┐    ┌───────────┐    ┌───────────┐ │
-│  │   App.tsx  │───▶│  Screens  │───▶│   Lib     │ │
-│  │  (Router)  │    │  (Views)  │    │  (Logic)  │ │
-│  └───────────┘    └───────────┘    └───────────┘ │
-│        │                                │         │
-│        ▼                                ▼         │
-│  ┌───────────┐                   ┌───────────┐   │
-│  │ background│                   │  chrome    │   │
-│  │   .ts     │                   │  storage   │   │
-│  └───────────┘                   └───────────┘   │
-│                                         │         │
-│                                         ▼         │
-│                                  ┌───────────┐   │
-│                                  │ AES-GCM   │   │
-│                                  │ Encrypted  │   │
-│                                  │ Vault      │   │
-│                                  └───────────┘   │
-└─────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│                    Chrome Extension                       │
+│                                                           │
+│  ┌──────────────┐   ┌──────────┐   ┌──────────────────┐ │
+│  │   App.tsx     │──▶│ Screens  │──▶│  lib/ (Logic)    │ │
+│  │ (Router +     │   │ (Views)  │   │                  │ │
+│  │  Lock Mgr)    │   │          │   │ wallet, vault,   │ │
+│  └──────────────┘   └──────────┘   │ cofhe, contracts, │ │
+│        ▲                            │ contacts, activity│ │
+│        │  VAULT_LOCKED              └──────────────────┘ │
+│        │  VAULT_UNLOCKED                    │            │
+│  ┌──────────────┐                   ┌──────────────┐    │
+│  │ background.ts │                  │ chrome.storage│    │
+│  │ (Auto-Lock    │                  │ (local +      │    │
+│  │  + RPC Proxy) │                  │  session)     │    │
+│  └──────────────┘                   └──────────────┘    │
+│                                            │             │
+│                                     ┌──────────────┐    │
+│                                     │ AES-GCM      │    │
+│                                     │ Encrypted    │    │
+│                                     │ Vault        │    │
+│                                     └──────────────┘    │
+└──────────────────────────────────────────────────────────┘
           │
           ▼
-┌─────────────────────┐
-│   Fhenix Network    │
-│  ┌───────────────┐  │
-│  │  coFHE SDK    │  │
-│  │  (FHE Ops)    │  │
-│  └───────────────┘  │
-│  ┌───────────────┐  │
-│  │  ethers.js    │  │
-│  │  (RPC/Txns)   │  │
-│  └───────────────┘  │
-└─────────────────────┘
+┌──────────────────────────────────────┐
+│         Ethereum Sepolia             │
+│  ┌──────────────────────────────┐   │
+│  │  FHERC20WrapperRegistry      │   │
+│  │  (Factory: auto-deploy       │   │
+│  │   wrappers per ERC-20)       │   │
+│  └──────────────────────────────┘   │
+│  ┌──────────────────────────────┐   │
+│  │  FHERC20UnderlyingWrapper(s) │   │
+│  │  (shield / unshield / claim  │   │
+│  │   / claimBatch / transfer)   │   │
+│  └──────────────────────────────┘   │
+│  ┌──────────────────────────────┐   │
+│  │  coFHE SDK (FHE encryption   │   │
+│  │  + Threshold decryption)     │   │
+│  └──────────────────────────────┘   │
+└──────────────────────────────────────┘
 ```
 
 ## Key Design Decisions
 
-### 1. No External Servers
+### 1. Chrome Side Panel
+The wallet opens in a persistent side panel (Chrome 114+) rather than a temporary popup. This allows the UI to remain open while navigating dApps. The manifest uses `side_panel.default_path` and `chrome.sidePanel.setPanelBehavior` to open on icon click.
+
+### 2. No External Servers
 All wallet logic runs locally in the browser. Private keys, seed phrases, and preferences never leave the user's device. There is no backend, no API proxy, and no telemetry.
 
-### 2. AES-GCM Encrypted Vault
-The seed phrase and derived keys are encrypted using AES-GCM with a password-derived key (PBKDF2). The encrypted blob is stored in `chrome.storage.local`. On unlock, the vault is decrypted in memory and wiped on lock.
+### 3. AES-GCM Encrypted Vault
+The seed phrase and imported keys are encrypted using AES-GCM with a password-derived key (PBKDF2, random salt). The encrypted blob lives in `chrome.storage.local`. On unlock, it's decrypted into memory; on lock, sensitive data is wiped.
 
-### 3. FHE Integration via coFHE SDK
-Token wrapping and unwrapping use the Fhenix coFHE SDK to perform client-side encryption before submitting transactions. The encrypted ciphertext is sent on-chain where Fhenix validators can process it without decrypting.
+### 4. Auto-Lock Flow
+The background service worker (`background.ts`) and the UI (`App.tsx`) communicate via Chrome messaging:
 
-### 4. Screen-Based Routing
-Instead of a traditional SPA router (React Router), `App.tsx` uses a simple state machine (`screen` state) to switch between views. This eliminates router overhead and simplifies the extension's navigation model.
+1. On successful unlock, `App.tsx` sends `VAULT_UNLOCKED` to background
+2. Background starts a 30-second polling interval comparing `Date.now() - lastActivity` against `autoLockTimeout`
+3. Every incoming message resets `lastActivity`
+4. When the threshold is exceeded, background broadcasts `VAULT_LOCKED`
+5. `App.tsx` listens for `VAULT_LOCKED`, clears memory, and transitions to the unlock screen
 
-### 5. State Isolation
-Each screen manages its own state. There is no global store (Redux, Zustand, etc.). Cross-screen data is passed via props from `App.tsx`. This keeps the architecture flat and easy to reason about.
+### 5. FHERC20 Wrapper Registry
+Instead of hardcoding wrapper addresses per token, the extension uses an on-chain `FHERC20WrapperRegistry` factory contract:
+
+- `getWrapper(underlying)` — read-only lookup (returns `address(0)` if none deployed)
+- `getOrCreateWrapper(underlying)` — deploys a new wrapper on-the-fly if none exists
+
+The registry names wrappers with the "Confidential" prefix and "c" symbol prefix (e.g., USDC becomes "Confidential USD Coin" / cUSDC). The first user to wrap a given ERC-20 pays the deployment gas. All subsequent users discover and share the same wrapper via the registry. This is analogous to Uniswap's pair factory pattern.
+
+### 6. Batch Claiming
+The FHERC20 wrapper supports `claimUnshieldedBatch` for claiming multiple pending unshield requests in a single transaction. The extension's WrapUnwrap screen detects orphaned claims and offers a "Claim All Pending" action that:
+1. Iterates pending claims and decrypts each via `decryptForTx`
+2. Submits all results in a single `claimUnshieldedBatch` call
+
+### 7. Screen-Based Routing
+`App.tsx` uses a simple state machine (`screen` state) to switch between views, avoiding router overhead and simplifying the extension's navigation model.
+
+### 8. State Isolation
+Each screen manages its own state. There is no global store. Cross-screen data is passed via props from `App.tsx`. This keeps the architecture flat and easy to reason about.
 
 ## Data Flow
 
@@ -66,18 +96,22 @@ User Action
     ▼
 Screen Component (e.g. Send.tsx)
     │
-    ├──▶ lib/wallet.ts  ──▶ ethers.js ──▶ Fhenix RPC
-    ├──▶ lib/cofhe.ts   ──▶ coFHE SDK ──▶ FHE Encryption
-    ├──▶ lib/vault.ts   ──▶ chrome.storage.local (encrypted)
-    └──▶ lib/activity.ts ──▶ chrome.storage.local (plaintext)
+    ├──▶ lib/wallet.ts    ──▶ ethers.js  ──▶ Sepolia RPC
+    ├──▶ lib/cofhe.ts     ──▶ coFHE SDK  ──▶ FHE Encryption / Threshold Decrypt
+    ├──▶ lib/contracts.ts  ──▶ Registry   ──▶ Wrapper lookup / deploy / interact
+    ├──▶ lib/vault.ts     ──▶ chrome.storage.local (AES-GCM encrypted)
+    ├──▶ lib/contacts.ts  ──▶ chrome.storage.local (unified address book)
+    └──▶ lib/activity.ts  ──▶ chrome.storage.local (transaction history)
 ```
 
 ## Directory Map
 
 | Directory | Purpose |
 |-----------|---------|
-| `src/screens/` | UI screens — one file per screen |
-| `src/lib/` | Business logic — wallet, vault, contacts, activity, crypto |
-| `src/components/` | Shared UI components |
-| `src/assets/` | Static images and icons |
-| `public/` | Extension manifest assets |
+| `extension/src/screens/` | UI screens — one file per screen |
+| `extension/src/lib/` | Business logic — wallet, vault, contacts, activity, contracts, cofhe |
+| `extension/src/components/` | Shared UI components (ThemeToggle, etc.) |
+| `extension/src/background.ts` | Service worker — auto-lock timer, RPC proxy |
+| `extension/public/` | Extension manifest and static assets |
+| `hardhat/contracts/` | Solidity contracts (Registry + Wrapper) |
+| `hardhat/deploy/` | Hardhat deployment scripts |

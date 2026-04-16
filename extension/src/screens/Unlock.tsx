@@ -19,8 +19,8 @@ export default function UnlockScreen({ onUnlock }: Props) {
     try {
       const data = await unlockVault(password);
       onUnlock(data);
-    } catch (e: any) {
-      setError(e.message || 'Access Denied: Invalid Key Sequence');
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Access Denied: Invalid Key Sequence');
     }
     setLoading(false);
   };
@@ -30,7 +30,7 @@ export default function UnlockScreen({ onUnlock }: Props) {
   };
 
   return (
-    <div className="w-[360px] h-[600px] overflow-hidden bg-app text-main font-sans flex flex-col items-center justify-center relative">
+    <div className="w-full min-h-screen overflow-hidden bg-app text-main font-sans flex flex-col items-center justify-center relative">
       <div className="absolute top-[-100px] left-[-100px] w-64 h-64 bg-brand-cyan/10 mix-blend-screen filter blur-[100px]" />
 
       <motion.div

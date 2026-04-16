@@ -45,8 +45,8 @@ export default function Onboarding({ onComplete }: Props) {
     try {
       await createVault({ mnemonic, privateKey }, password);
       onComplete(address);
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'An error occurred');
     }
     setLoading(false);
   };
@@ -62,7 +62,7 @@ export default function Onboarding({ onComplete }: Props) {
       const wallet = restoreFromMnemonic(importMnemonic.trim());
       await createVault({ mnemonic: wallet.mnemonic, privateKey: wallet.privateKey }, password);
       onComplete(wallet.address);
-    } catch (e: any) {
+    } catch {
       setError('Invalid recovery phrase. Please check and try again.');
     }
     setLoading(false);
@@ -77,7 +77,7 @@ export default function Onboarding({ onComplete }: Props) {
   };
 
   return (
-    <div className="w-[360px] h-[600px] overflow-hidden bg-app text-main font-sans relative flex flex-col">
+    <div className="w-full min-h-screen overflow-hidden bg-app text-main font-sans relative flex flex-col">
       {/* Background Layer */}
       <div className="absolute inset-0 bg-grid opacity-20 pointer-events-none" />
       <div className="absolute top-[-100px] left-[-100px] w-80 h-80 bg-brand-cyan/10 rounded-full blur-[120px] pointer-events-none" />
@@ -209,7 +209,7 @@ export default function Onboarding({ onComplete }: Props) {
                </div>
                <div className="bg-surface border border-ui p-4 flex justify-between items-center">
                   <span className="text-[8px] font-mono text-muted uppercase tracking-widest">Wallet Version</span>
-                  <span className="text-[9px] font-bold text-sub uppercase tracking-[0.1em]">v4.0.2</span>
+                  <span className="text-[9px] font-bold text-sub uppercase tracking-[0.1em]">v1.0.0</span>
                </div>
             </div>
 
@@ -337,7 +337,7 @@ export default function Onboarding({ onComplete }: Props) {
                </button>
                <div className="flex justify-between items-center px-1">
                   <span className="text-[8px] font-mono text-muted uppercase tracking-widest">All data stored locally</span>
-                  <span className="text-[8px] font-mono text-muted uppercase tracking-widest">v4.0.2</span>
+                  <span className="text-[8px] font-mono text-muted uppercase tracking-widest">v1.0.0</span>
                </div>
             </div>
           </motion.div>

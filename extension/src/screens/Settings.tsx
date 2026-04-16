@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowLeft, Globe, Trash2, Eye, EyeOff, AlertTriangle, Clock, ShieldCheck, 
-  BookUser, Link as LinkIcon, Info, ChevronRight, Plus
+  BookUser, Link as LinkIcon, Info, ChevronRight, Plus, Copy, Check
 } from 'lucide-react';
 import { FHENIX_NETWORKS, getActiveNetwork } from '../lib/wallet';
 import type { NetworkId } from '../lib/wallet';
-import { resetVault } from '../lib/vault';
+import { resetVault, unlockVault } from '../lib/vault';
+import { clearActivities } from '../lib/activity';
+import { getContacts, saveContact, deleteContact, type Contact } from '../lib/contacts';
 
 interface Props {
   address: string;
@@ -25,29 +27,45 @@ const TIMEOUT_OPTIONS = [
 
 type SettingsTab = 'menu' | 'security' | 'addressBook' | 'networks' | 'about';
 
-interface AddressEntry {
-  name: string;
-  address: string;
-}
-
 export default function SettingsScreen({ mnemonic, onBack, onReset, onNetworkChange, onNavigate }: Props) {
   const [activeTab, setActiveTab] = useState<SettingsTab>('menu');
   const [showMnemonic, setShowMnemonic] = useState(false);
+  const [mnemonicPassword, setMnemonicPassword] = useState('');
+  const [mnemonicPasswordError, setMnemonicPasswordError] = useState('');
+  const [mnemonicPrompting, setMnemonicPrompting] = useState(false);
+  const [mnemonicCopied, setMnemonicCopied] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [autoLockTimeout, setAutoLockTimeout] = useState(10 * 60 * 1000);
   const network = getActiveNetwork();
 
-  // Address Book State
-  const [addresses, setAddresses] = useState<AddressEntry[]>([]);
+  // Unified address book via contacts.ts
+  const [contacts, setContacts] = useState<Contact[]>([]);
   const [isAddingAddress, setIsAddingAddress] = useState(false);
   const [newAddrName, setNewAddrName] = useState('');
   const [newAddrVal, setNewAddrVal] = useState('');
 
   useEffect(() => {
-    chrome.storage.local.get(['autoLockTimeout', 'addressBook']).then((res: { [key: string]: any }) => {
-      if (res.autoLockTimeout) setAutoLockTimeout(res.autoLockTimeout);
-      if (res.addressBook) setAddresses(res.addressBook);
+    chrome.storage.local.get(['autoLockTimeout']).then((res) => {
+      if (typeof res.autoLockTimeout === 'number') setAutoLockTimeout(res.autoLockTimeout);
     });
+
+    // Load contacts and migrate legacy addressBook data if present
+    (async () => {
+      const existing = await getContacts();
+
+      const legacy = await chrome.storage.local.get(['addressBook']);
+      if (legacy.addressBook && Array.isArray(legacy.addressBook) && legacy.addressBook.length > 0) {
+        for (const entry of legacy.addressBook) {
+          if (entry.address && !existing.find(c => c.address.toLowerCase() === entry.address.toLowerCase())) {
+            await saveContact({ address: entry.address, name: entry.name || '' });
+          }
+        }
+        await chrome.storage.local.remove('addressBook');
+        setContacts(await getContacts());
+      } else {
+        setContacts(existing);
+      }
+    })();
   }, []);
 
   const handleNetworkSwitch = (id: NetworkId) => {
@@ -64,21 +82,18 @@ export default function SettingsScreen({ mnemonic, onBack, onReset, onNetworkCha
     onReset();
   };
 
-  const saveAddress = async () => {
+  const handleSaveAddress = async () => {
     if (!newAddrName || !newAddrVal) return;
-    const newEntry = { name: newAddrName, address: newAddrVal };
-    const updated = [...addresses, newEntry];
-    setAddresses(updated);
-    await chrome.storage.local.set({ addressBook: updated });
+    await saveContact({ address: newAddrVal, name: newAddrName });
+    setContacts(await getContacts());
     setIsAddingAddress(false);
     setNewAddrName('');
     setNewAddrVal('');
   };
 
-  const removeAddress = async (index: number) => {
-    const updated = addresses.filter((_, i) => i !== index);
-    setAddresses(updated);
-    await chrome.storage.local.set({ addressBook: updated });
+  const handleRemoveAddress = async (addr: string) => {
+    await deleteContact(addr);
+    setContacts(await getContacts());
   };
 
   const renderMainMenu = () => (
@@ -158,21 +173,99 @@ export default function SettingsScreen({ mnemonic, onBack, onReset, onNetworkCha
             <span className="text-label-caps text-main">Secret Phrase</span>
           </div>
           <button
-            onClick={() => setShowMnemonic(!showMnemonic)}
+            onClick={() => {
+              if (showMnemonic) {
+                setShowMnemonic(false);
+                setMnemonicPrompting(false);
+              } else {
+                setMnemonicPrompting(true);
+                setMnemonicPassword('');
+                setMnemonicPasswordError('');
+              }
+            }}
             className="text-sub hover:text-brand-cyan transition-colors"
           >
             {showMnemonic ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>
         </div>
-        {showMnemonic ? (
-          <div className="bg-app border border-ui p-4 text-[10px] font-mono text-main leading-relaxed border-l-2 border-l-brand-cyan border-y-ui border-r-ui">
-            {mnemonic}
+        {mnemonicPrompting && !showMnemonic && (
+          <div className="space-y-3 mb-3">
+            <input
+              type="password"
+              value={mnemonicPassword}
+              onChange={e => { setMnemonicPassword(e.target.value); setMnemonicPasswordError(''); }}
+              placeholder="Enter wallet password to reveal"
+              className="w-full bg-app border border-ui px-4 py-3 text-sm focus:outline-none focus:border-brand-cyan transition-colors"
+              onKeyDown={async (e) => {
+                if (e.key !== 'Enter' || !mnemonicPassword) return;
+                try {
+                  await unlockVault(mnemonicPassword);
+                  setShowMnemonic(true);
+                  setMnemonicPrompting(false);
+                  setTimeout(() => { setShowMnemonic(false); }, 30000);
+                } catch {
+                  setMnemonicPasswordError('Incorrect password');
+                }
+              }}
+            />
+            {mnemonicPasswordError && <p className="text-[10px] text-red-500">{mnemonicPasswordError}</p>}
+            <button
+              onClick={async () => {
+                if (!mnemonicPassword) return;
+                try {
+                  await unlockVault(mnemonicPassword);
+                  setShowMnemonic(true);
+                  setMnemonicPrompting(false);
+                  setTimeout(() => { setShowMnemonic(false); }, 30000);
+                } catch {
+                  setMnemonicPasswordError('Incorrect password');
+                }
+              }}
+              className="w-full py-2 bg-brand-cyan text-brand-midnight font-bold text-label-caps"
+            >
+              Verify & Reveal
+            </button>
           </div>
-        ) : (
+        )}
+        {showMnemonic ? (
+          <div className="relative">
+            <div className="bg-app border border-ui p-4 text-[10px] font-mono text-main leading-relaxed border-l-2 border-l-brand-cyan border-y-ui border-r-ui pr-10">
+              {mnemonic}
+            </div>
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(mnemonic);
+                setMnemonicCopied(true);
+                setTimeout(() => setMnemonicCopied(false), 2000);
+              }}
+              className="absolute top-2 right-2 p-1.5 text-sub hover:text-brand-cyan transition-colors"
+            >
+              {mnemonicCopied ? <Check className="w-3.5 h-3.5 text-brand-cyan" /> : <Copy className="w-3.5 h-3.5" />}
+            </button>
+            <div className="text-[9px] text-muted mt-2 px-1">Auto-hides in 30 seconds</div>
+          </div>
+        ) : !mnemonicPrompting ? (
           <div className="bg-app border border-ui p-4 text-[10px] font-mono text-muted tracking-[0.2em]">
             •••• •••• •••• •••• •••• ••••
           </div>
-        )}
+        ) : null}
+      </div>
+
+      <div className="bg-surface p-4 border border-ui">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Trash2 className="w-4 h-4 text-brand-cyan" />
+            <span className="text-label-caps text-main">Transaction History</span>
+          </div>
+          <button
+            onClick={async () => {
+              await clearActivities();
+            }}
+            className="text-label-caps text-sub hover:text-red-500 transition-colors"
+          >
+            Clear All
+          </button>
+        </div>
       </div>
 
       <div className="pt-8 border-t border-ui">
@@ -230,7 +323,7 @@ export default function SettingsScreen({ mnemonic, onBack, onReset, onNetworkCha
           />
           <div className="flex gap-2">
             <button onClick={() => setIsAddingAddress(false)} className="flex-1 py-2 text-sub border border-transparent hover:border-ui">Cancel</button>
-            <button onClick={saveAddress} className="flex-1 py-2 bg-brand-cyan text-brand-midnight font-bold">Save</button>
+            <button onClick={handleSaveAddress} className="flex-1 py-2 bg-brand-cyan text-brand-midnight font-bold">Save</button>
           </div>
         </div>
       ) : (
@@ -239,19 +332,19 @@ export default function SettingsScreen({ mnemonic, onBack, onReset, onNetworkCha
         </button>
       )}
 
-      {addresses.map((a, i) => (
-        <div key={i} className="bg-surface border border-ui p-4 flex justify-between items-center group hover:border-brand-cyan/50 transition-colors">
+      {contacts.map(c => (
+        <div key={c.address} className="bg-surface border border-ui p-4 flex justify-between items-center group hover:border-brand-cyan/50 transition-colors">
           <div>
-            <div className="font-bold text-sm">{a.name}</div>
-            <div className="text-xs font-mono text-sub mt-1">{a.address.slice(0, 8)}...{a.address.slice(-6)}</div>
+            <div className="font-bold text-sm">{c.name}</div>
+            <div className="text-xs font-mono text-sub mt-1">{c.address.slice(0, 8)}...{c.address.slice(-6)}</div>
           </div>
-          <button onClick={() => removeAddress(i)} className="p-2 text-sub hover:text-red-500 transition-colors">
+          <button onClick={() => handleRemoveAddress(c.address)} className="p-2 text-sub hover:text-red-500 transition-colors">
             <Trash2 className="w-4 h-4" />
           </button>
         </div>
       ))}
       
-      {addresses.length === 0 && !isAddingAddress && (
+      {contacts.length === 0 && !isAddingAddress && (
         <div className="text-center py-8 text-sub text-sm">
           No addresses saved yet.
         </div>
@@ -264,7 +357,7 @@ export default function SettingsScreen({ mnemonic, onBack, onReset, onNetworkCha
       {(Object.keys(FHENIX_NETWORKS) as NetworkId[]).map(id => {
         const net = FHENIX_NETWORKS[id];
         const isActive = id === network.id;
-        const isComingSoon = (net as any).isComingSoon;
+        const isComingSoon = 'isComingSoon' in net && net.isComingSoon;
 
         return (
           <button
@@ -302,7 +395,7 @@ export default function SettingsScreen({ mnemonic, onBack, onReset, onNetworkCha
       </div>
       <div>
         <h2 className="text-xl font-brand font-bold uppercase tracking-tighter text-main">NixWallet</h2>
-        <p className="text-xs text-sub font-mono tracking-widest mt-1">v2.4.0</p>
+        <p className="text-xs text-sub font-mono tracking-widest mt-1">v1.0.0</p>
       </div>
       <p className="text-sm text-sub leading-relaxed">
         The premier confidential wallet powered by the Fhenix coFHE network. Built for privacy, speed, and seamless access to the decentralized web.
@@ -317,7 +410,7 @@ export default function SettingsScreen({ mnemonic, onBack, onReset, onNetworkCha
   );
 
   return (
-    <div className="w-[360px] h-[600px] overflow-hidden bg-app text-main font-sans relative flex flex-col">
+    <div className="w-full min-h-screen overflow-hidden bg-app text-main font-sans relative flex flex-col">
       <div className="absolute top-[-100px] left-[-100px] w-64 h-64 bg-brand-cyan/10 mix-blend-screen filter blur-[100px]" />
 
       <header className="w-full p-6 flex items-center gap-4 relative z-10 border-b border-ui">

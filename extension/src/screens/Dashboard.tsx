@@ -2,16 +2,18 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Shield, ArrowRightLeft, ArrowUpRight, ArrowDownRight,
-  Lock, Copy, Check, Settings, LogOut, RefreshCw, Eye, Loader2, X, ExternalLink, ChevronDown, Plus, AlertCircle, Download,
+  Lock, Copy, Check, Settings, LogOut, RefreshCw, Eye, Loader2, X, ExternalLink, ChevronDown, Plus, AlertCircle,
   DollarSign
 } from 'lucide-react';
 import { shortenAddress, formatBalance, getProvider } from '../lib/wallet';
-import { CONTRACTS } from '../lib/contracts';
-import { initCofheClient, decryptForView } from '../lib/cofhe';
+import { getWrapperAddress } from '../lib/contracts';
+import { initCofheClient, decryptForView, FheTypes } from '../lib/cofhe';
 import { getActivities, type Activity } from '../lib/activity';
+import { ensureDefaults, type TokenMetadata } from '../lib/tokens';
 import { ethers } from 'ethers';
 import Discover from './Discover';
 import ThemeToggle from '../components/ThemeToggle';
+import AccountPicker from '../components/AccountPicker';
 
 interface Props {
   address: string;
@@ -19,10 +21,10 @@ interface Props {
   mnemonic?: string;
   accountIndex?: number;
   importedAccounts?: { address: string; privateKey: string; name?: string }[];
-  network: any;
+  network: { id: string; name: string; symbol: string; chainId: number; explorer: string; [k: string]: unknown };
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
-  onNavigate: (screen: string, tokenData?: any) => void;
+  onNavigate: (screen: string, tokenData?: { symbol: string; address: string; decimals?: number }) => void;
   onAccountChange?: (arg: number | string) => void;
   onImportAccount?: (acc: { address: string; privateKey: string; name?: string }, password: string) => Promise<boolean>;
   onLock: () => void;
@@ -56,15 +58,15 @@ export default function Dashboard({
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [showAccountPicker, setShowAccountPicker] = useState(false);
   const [accountCount, setAccountCount] = useState(1);
-  const [isImporting, setIsImporting] = useState(false);
-  const [importPK, setImportPK] = useState('');
-  const [importPassword, setImportPassword] = useState('');
-  const [importError, setImportError] = useState('');
-  const [importLoading, setImportLoading] = useState(false);
   const [showTokenPicker, setShowTokenPicker] = useState<{ open: boolean; action: 'send' | 'wrap' }>({ open: false, action: 'send' });
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
+  const key = `custom_tokens_${network.id}`;
+  const [customMetadata, setCustomMetadata] = useState<TokenMetadata[]>([]);
 
   const fetchBalances = useCallback(async () => {
     setRefreshing(true);
+    setFetchError(null);
     try {
       const provider = getProvider();
       const balance = await provider.getBalance(address);
@@ -73,88 +75,68 @@ export default function Dashboard({
       const history = await getActivities(network.id, address);
       setActivities(history);
 
-      // Fetch dynamic account count
       const accRes = await chrome.storage.local.get(['accountCount']);
       const count = accRes.accountCount !== undefined ? Number(accRes.accountCount) : 1;
       setAccountCount(Math.max(count, (accountIndex || 0) + 1));
 
-      // Fetch custom tokens
-      const injectedKey = `injected_defaults_${network.id}`;
-      const [storageRes, injectedRes] = await Promise.all([
-        chrome.storage.local.get([key]),
-        chrome.storage.local.get([injectedKey])
-      ]);
-      
-      let customs = (storageRes[key] || []) as any[];
-
-      const SEPOLIA_DEFAULTS = network.id === 'sepolia' ? [
-        { symbol: 'USDT', name: 'Tether USD', address: '0xaA8E23Fb1079EA71e0a56F48a2aA51851D8433D0', decimals: 6, isDefault: true },
-        { symbol: 'USDC', name: 'USD Coin', address: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238', decimals: 6, isDefault: true },
-      ] : [];
-
-      if (!injectedRes[injectedKey]) {
-        let addedDefaults = false;
-        SEPOLIA_DEFAULTS.forEach(def => {
-          if (!customs.find(c => c.address.toLowerCase() === def.address.toLowerCase())) {
-            customs.push(def);
-            addedDefaults = true;
-          }
-        });
-        
-        if (addedDefaults) {
-          await chrome.storage.local.set({ [key]: customs });
-        }
-        await chrome.storage.local.set({ [injectedKey]: true });
-      }
+      const customs = await ensureDefaults(network.id);
+      setCustomMetadata(customs);
 
       const customResults: Record<string, string> = {};
-      const customPrivates: Record<string, string | null> = {};
 
-      const allToFetch = [...customs];
-
-      await Promise.all(allToFetch.map(async (t) => {
+      await Promise.all(customs.map(async (t) => {
         try {
           const contract = new ethers.Contract(t.address, ['function balanceOf(address) view returns (uint256)'], provider);
           const bal = await contract.balanceOf(address);
           customResults[t.address] = ethers.formatUnits(bal, t.decimals);
-
-          customPrivates[t.address] = customPrivateBalances[t.address] || '***';
-        } catch (e) {
+        } catch {
           customResults[t.address] = '0.0000';
-          customPrivates[t.address] = '0.0000';
         }
       }));
       setCustomTokenBalances(customResults);
-      setCustomPrivateBalances(prev => ({...prev, ...customPrivates}));
-    } catch (e) {
-      console.error('Failed to fetch data:', e);
+      setCustomPrivateBalances(prev => {
+        const updated: Record<string, string | null> = { ...prev };
+        for (const t of customs) {
+          if (!(t.address in updated)) updated[t.address] = '***';
+        }
+        return updated;
+      });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message.slice(0, 80) : 'Failed to connect to network';
+      setFetchError(msg);
+      setTimeout(() => setFetchError(null), 10000);
     }
     setRefreshing(false);
-  }, [address, network.id]);
+  }, [address, network.id, accountIndex]);
 
-  const handleRevealToken = async (tokenAddress: string, decimals: number) => {
+  const handleRevealToken = async (tokenAddress: string) => {
     setDecryptingTokens(prev => ({ ...prev, [tokenAddress]: true }));
     try {
       await initCofheClient(_pk);
       const provider = getProvider();
       const signer = new ethers.Wallet(_pk, provider);
+      const wrapperAddr = await getWrapperAddress(provider, tokenAddress);
+      if (!wrapperAddr) {
+        setCustomPrivateBalances(prev => ({ ...prev, [tokenAddress]: '0.00' }));
+        setDecryptingTokens(prev => ({ ...prev, [tokenAddress]: false }));
+        return;
+      }
+
       const wrapper = new ethers.Contract(
-        CONTRACTS.wrapper,
-        ['function getBalance(address) external view returns (bytes32)'],
+        wrapperAddr,
+        ['function confidentialBalanceOf(address) external view returns (bytes32)'],
         signer
       );
       
-      const ctHash: string = await wrapper.getBalance(tokenAddress);
+      const ctHash: string = await wrapper.confidentialBalanceOf(address);
       
       if (ctHash === '0x' + '0'.repeat(64)) {
         setCustomPrivateBalances(prev => ({ ...prev, [tokenAddress]: '0.0000' }));
       } else {
-        const decryptedWei = await decryptForView(ctHash, network.chainId, address);
-        setCustomPrivateBalances(prev => ({ ...prev, [tokenAddress]: ethers.formatUnits(decryptedWei, decimals) }));
+        const decrypted = await decryptForView(ctHash, network.chainId, address, FheTypes.Uint64);
+        setCustomPrivateBalances(prev => ({ ...prev, [tokenAddress]: ethers.formatUnits(decrypted, 6) }));
       }
-    } catch (e: any) {
-      console.error('Reveal Error:', e);
-    } finally {
+    } catch { /* reveal errors are non-critical */ } finally {
       setDecryptingTokens(prev => ({ ...prev, [tokenAddress]: false }));
     }
   };
@@ -166,20 +148,20 @@ export default function Dashboard({
   }, [fetchBalances]);
 
   useEffect(() => {
-    const listener = (changes: { [key: string]: chrome.storage.StorageChange }, areaName: string) => {
+    const listener = (changes: Record<string, chrome.storage.StorageChange>, areaName: string) => {
       if (areaName === 'local' && changes['nixwallet_activity']) {
         getActivities(network.id, address).then(setActivities);
       }
     };
     chrome.storage.onChanged.addListener(listener);
     return () => chrome.storage.onChanged.removeListener(listener);
-  }, [network.id]);
+  }, [network.id, address]);
 
   useEffect(() => {
     if (activeTab === 'activity') {
       getActivities(network.id, address).then(setActivities);
     }
-  }, [activeTab, network.id]);
+  }, [activeTab, network.id, address]);
 
   const copyAddress = () => {
     navigator.clipboard.writeText(address);
@@ -187,27 +169,13 @@ export default function Dashboard({
     setTimeout(() => setCopied(false), 2000);
   };
 
-
-
-  // Map custom tokens
-  const key = `custom_tokens_${network.id}`;
-  // Note: we fetch this in useEffect/fetchBalances, but we need the metadata here for the UI list.
-  // We'll use a local state for the metadata too or just pull from storage once.
-  const [customMetadata, setCustomMetadata] = useState<any[]>([]);
   useEffect(() => {
-     chrome.storage.local.get([key]).then(res => {
-       const data = res[key] as any[];
-       setCustomMetadata(data || []);
-     });
-     
-     // Also sync account count
-     chrome.storage.local.get(['accountCount']).then(res => {
-       const count = res.accountCount !== undefined ? Number(res.accountCount) : 1;
-       setAccountCount(Math.max(count, (accountIndex || 0) + 1));
-     });
-  }, [network.id, accountIndex, showAccountPicker]); // refresh when account or network changes
+    chrome.storage.local.get([key]).then(res => {
+      setCustomMetadata((res[key] as TokenMetadata[]) || []);
+    });
+  }, [key, showAccountPicker]);
 
-   const priority = ['USDT', 'USDC'];
+  const priority = ['USDT', 'USDC'];
   
   const customHybridTokens = [
     ...customMetadata
@@ -232,7 +200,7 @@ export default function Dashboard({
   });
 
   return (
-    <div className="w-[360px] h-[600px] overflow-hidden bg-app text-main font-brand relative flex flex-col">
+    <div className="w-full min-h-screen overflow-hidden bg-app text-main font-brand relative flex flex-col">
       {/* BG Decorators */}
       <div className="absolute top-[-100px] left-[-100px] w-64 h-64 bg-brand-cyan/20 rounded-full mix-blend-screen filter blur-[80px]" />
       <div className="absolute bottom-[-100px] right-[-100px] w-64 h-64 bg-brand-navy/60 rounded-full mix-blend-screen filter blur-[80px]" />
@@ -331,6 +299,27 @@ export default function Dashboard({
             </button>
           </div>
         </motion.div>
+
+        {/* RPC Error Banner */}
+        <AnimatePresence>
+          {fetchError && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mb-4 bg-red-500/10 border border-red-500/20 p-3 flex items-center gap-3"
+            >
+              <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+              <span className="text-[10px] text-red-400 flex-1 font-mono">{fetchError}</span>
+              <button onClick={fetchBalances} className="text-[9px] font-bold text-red-400 hover:text-red-300 uppercase tracking-wider shrink-0">
+                Retry
+              </button>
+              <button onClick={() => setFetchError(null)} className="text-red-400 hover:text-red-300 shrink-0">
+                <X className="w-3 h-3" />
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Tabs */}
         <div className="flex border-b border-ui mb-6">
@@ -444,7 +433,7 @@ export default function Dashboard({
                                </>
                             ) : (
                                <button
-                                 onClick={(e) => { e.stopPropagation(); handleRevealToken(token.address, token.decimals); }}
+                                 onClick={(e) => { e.stopPropagation(); handleRevealToken(token.address); }}
                                  disabled={decryptingTokens[token.address]}
                                  className="text-[9px] font-bold text-brand-cyan hover:text-brand-cyan/80 transition-colors uppercase tracking-widest flex items-center gap-2"
                                >
@@ -466,13 +455,21 @@ export default function Dashboard({
                         className="px-4 pb-4 pt-2 flex gap-2 border-x border-b border-ui"
                       >
                         <button
-                          onClick={() => onNavigate('send', { symbol: token.symbol, address: token.address, decimals: token.decimals })}
+                          onClick={() => onNavigate('send', {
+                            symbol: token.symbol,
+                            address: token.address,
+                            decimals: token.decimals,
+                          })}
                           className="flex-1 py-3 bg-surface hover:bg-brand-cyan hover:text-brand-midnight text-label-caps transition-all flex items-center justify-center gap-2"
                         >
                           <ArrowUpRight className="w-4 h-4" /> Send
                         </button>
                         <button
-                          onClick={() => onNavigate('wrap', { symbol: token.symbol, address: token.address, decimals: token.decimals })}
+                          onClick={() => onNavigate('wrap', {
+                            symbol: token.symbol,
+                            address: token.address,
+                            decimals: token.decimals,
+                          })}
                           className="flex-1 py-3 bg-surface hover:bg-brand-cyan hover:text-brand-midnight text-label-caps transition-all flex items-center justify-center gap-2"
                         >
                           <ArrowRightLeft className="w-4 h-4" /> Wrap/Unwrap
@@ -508,42 +505,69 @@ export default function Dashboard({
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {activities.map(act => (
-                    <div 
-                      key={act.id} 
-                      onClick={() => setSelectedActivity(act)}
-                      className="flex items-center gap-3 p-3 bg-surface border border-ui hover:bg-input-field cursor-pointer transition-colors group"
-                    >
-                      <div className={`w-9 h-9 flex items-center justify-center transition-transform group-hover:scale-105 ${
-                        act.type === 'send' ? 'bg-brand-cyan/10 text-brand-cyan' :
-                        act.type === 'wrap' ? 'bg-brand-cyan/20 text-brand-cyan' :
-                        act.type === 'unwrap' ? 'bg-amber-500/10 text-amber-400' :
-                        'bg-brand-cyan/10 text-brand-cyan'
-                      }`}>
-                        {act.type === 'send' ? <ArrowUpRight className="w-4 h-4" /> :
-                         act.type === 'wrap' ? <ArrowRightLeft className="w-4 h-4" /> :
-                         act.type === 'unwrap' ? <ArrowRightLeft className="w-4 h-4" /> :
-                         <Shield className="w-4 h-4" />}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-0.5">
-                          <span className="text-sm font-semibold capitalize">{act.type.replace('-', ' ')}</span>
-                          <span className={`text-sm font-mono font-bold ${act.status === 'pending' ? 'text-amber-400 animate-pulse' : 'text-main'}`}>
-                            {act.amount}
-                          </span>
+                  {activities.map(act => {
+                    const isOld = Date.now() - act.timestamp > 86400000;
+                    const timeStr = isOld
+                      ? new Date(act.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+                      : new Date(act.timestamp).toLocaleTimeString();
+                    return (
+                      <div 
+                        key={act.id} 
+                        onClick={() => setSelectedActivity(act)}
+                        className="flex items-center gap-3 p-3 bg-surface border border-ui hover:bg-input-field cursor-pointer transition-colors group"
+                      >
+                        <div className={`w-9 h-9 flex items-center justify-center transition-transform group-hover:scale-105 ${
+                          act.type === 'send' ? 'bg-brand-cyan/10 text-brand-cyan' :
+                          act.type === 'wrap' ? 'bg-brand-cyan/20 text-brand-cyan' :
+                          act.type === 'unwrap' ? 'bg-amber-500/10 text-amber-400' :
+                          'bg-brand-cyan/10 text-brand-cyan'
+                        }`}>
+                          {act.type === 'send' ? <ArrowUpRight className="w-4 h-4" /> :
+                           act.type === 'wrap' ? <ArrowRightLeft className="w-4 h-4" /> :
+                           act.type === 'unwrap' ? <ArrowRightLeft className="w-4 h-4" /> :
+                           <Shield className="w-4 h-4" />}
                         </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] text-sub">{new Date(act.timestamp).toLocaleTimeString()}</span>
-                          <span className={`text-[10px] font-bold uppercase tracking-tighter ${
-                            act.status === 'pending' ? 'text-amber-500/80' : 
-                            act.status === 'success' ? 'text-brand-cyan' : 'text-red-500/80'
-                          }`}>
-                            {act.status}
-                          </span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-0.5">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-sm font-semibold capitalize">{act.type.replace('-', ' ')}</span>
+                              {act.isConfidential && <Lock className="w-3 h-3 text-brand-cyan" />}
+                            </div>
+                            <span className={`text-sm font-mono font-bold ${act.status === 'pending' ? 'text-amber-400 animate-pulse' : 'text-main'}`}>
+                              {act.amount}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] text-sub">{timeStr}</span>
+                              {act.recipient && (act.type === 'send' || act.type === 'confidential-transfer') && (
+                                <span className="text-[9px] font-mono text-muted">→ {shortenAddress(act.recipient)}</span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className={`text-[10px] font-bold uppercase tracking-tighter ${
+                                act.status === 'pending' ? 'text-amber-500/80' : 
+                                act.status === 'success' ? 'text-brand-cyan' : 'text-red-500/80'
+                              }`}>
+                                {act.status}
+                              </span>
+                              {act.hash && network.explorer && (
+                                <a
+                                  href={`${network.explorer}/tx/${act.hash}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={e => e.stopPropagation()}
+                                  className="text-muted hover:text-brand-cyan transition-colors"
+                                >
+                                  <ExternalLink className="w-3 h-3" />
+                                </a>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </motion.div>
@@ -605,7 +629,7 @@ export default function Dashboard({
                       selectedActivity.status === 'pending' ? 'text-amber-400 animate-pulse' : 'text-red-500'
                     }`}>
                       <div className={`w-2 h-2 ${selectedActivity.status === 'success' ? 'bg-brand-cyan glow-cyan' : 'bg-current'}`} />
-                      {selectedActivity.status === 'success' ? 'Success' : 'Processing'}
+                      {selectedActivity.status === 'success' ? 'Success' : selectedActivity.status === 'error' ? 'Failed' : 'Processing'}
                     </div>
                   </div>
                   <div className="text-right">
@@ -646,6 +670,23 @@ export default function Dashboard({
                     <span className="text-brand-cyan font-bold text-sm bg-brand-cyan/10 px-2 py-1">{selectedActivity.amount}</span>
                   </div>
                   <div className="flex justify-between items-center">
+                    <span className="text-muted">Date</span>
+                    <span className="text-main font-mono text-[10px]">
+                      {new Date(selectedActivity.timestamp).toLocaleString(undefined, {
+                        year: 'numeric', month: 'short', day: 'numeric',
+                        hour: '2-digit', minute: '2-digit',
+                      })}
+                    </span>
+                  </div>
+                  {selectedActivity.isConfidential && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted">Type</span>
+                      <span className="text-brand-cyan text-[10px] font-bold flex items-center gap-1 bg-brand-cyan/10 px-2 py-1">
+                        <Lock className="w-3 h-3" /> Confidential
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center">
                     <span className="text-muted">Transaction ID</span>
                     <span className="text-main font-mono">#{selectedActivity.id.slice(0, 8)}</span>
                   </div>
@@ -663,185 +704,21 @@ export default function Dashboard({
         )}
       </AnimatePresence>
 
-      {/* Account Picker Modal */}
-      <AnimatePresence>
-        {showAccountPicker && (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-md p-6">
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="w-full max-w-[300px] bg-app border border-ui rounded-3xl overflow-hidden shadow-card max-h-[85vh] flex flex-col"
-            >
-              <div className="p-5 border-b border-ui shrink-0 flex justify-between items-center bg-app z-10">
-                <h3 className="text-lg font-bold text-main">Select Account</h3>
-                <button onClick={() => setShowAccountPicker(false)} className="p-1.5 rounded-full hover:bg-ui transition-colors">
-                  <X className="w-4 h-4 text-sub" />
-                </button>
-              </div>
-
-              <div className="p-5 overflow-y-auto flex-1 min-h-0 relative">
-                <h3 className="text-xs font-bold text-muted uppercase tracking-wider mb-4 px-2">HD Wallets</h3>
-                <div className="space-y-2 mb-6">
-                  {Array.from({ length: accountCount }).map((_, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => {
-                        onAccountChange?.(idx);
-                        setShowAccountPicker(false);
-                      }}
-                      className={`w-full p-4 rounded-2xl border transition-all flex items-center gap-3 ${
-                        (accountIndex !== undefined && typeof accountIndex === 'number' && accountIndex === idx)
-                          ? 'bg-brand-cyan/10 border-brand-cyan/50 text-main shadow-lg'
-                          : 'bg-surface border-ui text-sub hover:bg-input-field hover:border-brand-cyan/30'
-                      }`}
-                    >
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
-                        (accountIndex !== undefined && typeof accountIndex === 'number' && accountIndex === idx) ? 'bg-brand-cyan text-brand-midnight' : 'bg-surface border border-ui text-sub'
-                      }`}>
-                        {idx + 1}
-                      </div>
-                      <div className="text-left">
-                        <div className="text-sm font-bold text-main">Account {idx + 1}</div>
-                        <div className="text-[10px] opacity-50 font-mono">
-                          {idx === 0 ? 'Primary' : `Derived Account ${idx}`}
-                        </div>
-                      </div>
-                      {(accountIndex !== undefined && typeof accountIndex === 'number' && accountIndex === idx) && (
-                        <Check className="w-4 h-4 text-brand-cyan ml-auto" />
-                      )}
-                    </button>
-                  ))}
-                </div>
-
-                {importedAccounts && importedAccounts.length > 0 && (
-                  <>
-                    <h3 className="text-xs font-bold text-muted uppercase tracking-wider mb-4 px-2">Imported</h3>
-                    <div className="space-y-2 mb-6">
-                      {importedAccounts.map((acc, idx) => (
-                        <button
-                          key={acc.address}
-                          onClick={() => {
-                            onAccountChange?.(acc.address);
-                            setShowAccountPicker(false);
-                          }}
-                          className={`w-full p-4 rounded-2xl border transition-all flex items-center gap-3 ${
-                            address.toLowerCase() === acc.address.toLowerCase()
-                              ? 'bg-brand-cyan/10 border-brand-cyan/50 text-main shadow-lg'
-                              : 'bg-surface border-ui text-sub hover:bg-input-field hover:border-brand-cyan/30'
-                          }`}
-                        >
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
-                            address.toLowerCase() === acc.address.toLowerCase() ? 'bg-brand-cyan text-brand-midnight' : 'bg-surface border border-ui text-sub'
-                          }`}>
-                            <Download className="w-3.5 h-3.5" />
-                          </div>
-                          <div className="text-left">
-                            <div className="text-sm font-bold text-main">{acc.name || `Imported ${idx + 1}`}</div>
-                            <div className="text-[10px] opacity-50 font-mono">
-                              {shortenAddress(acc.address)}
-                            </div>
-                          </div>
-                          {address.toLowerCase() === acc.address.toLowerCase() && (
-                            <Check className="w-4 h-4 text-brand-cyan ml-auto" />
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                )}
-
-                {!isImporting ? (
-                  <div className="grid grid-cols-2 gap-3 mb-6">
-                    {mnemonic && (
-                      <button
-                        onClick={() => {
-                          const newCount = accountCount + 1;
-                          setAccountCount(newCount);
-                          chrome.storage.local.set({ accountCount: newCount });
-                          onAccountChange?.(newCount - 1);
-                          setShowAccountPicker(false);
-                        }}
-                        className="py-3 rounded-xl border border-dashed border-ui text-brand-cyan hover:text-brand-cyan hover:border-brand-cyan/50 hover:bg-brand-cyan/5 transition-all flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-wider"
-                      >
-                        <Plus className="w-3 h-3" /> Add HD
-                      </button>
-                    )}
-                    <button
-                      onClick={() => setIsImporting(true)}
-                      className="py-3 rounded-xl border border-dashed border-ui text-brand-cyan hover:text-brand-cyan hover:border-brand-cyan/50 hover:bg-brand-cyan/5 transition-all flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-wider"
-                    >
-                      <Download className="w-3 h-3" /> Import PK
-                    </button>
-                  </div>
-                ) : (
-                  <div className="space-y-3 mb-6 bg-surface border border-ui p-4 rounded-2xl">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-[10px] font-bold text-muted uppercase">Import Private Key</span>
-                      <button onClick={() => { setIsImporting(false); setImportPK(''); setImportError(''); }} className="text-sub hover:text-main">
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                    <textarea
-                      value={importPK}
-                      onChange={(e) => setImportPK(e.target.value)}
-                      placeholder="Paste your private key here..."
-                      className="w-full bg-input-field border border-ui rounded-xl p-3 text-xs text-main font-mono h-20 focus:border-brand-cyan/50 outline-none resize-none transition-colors mb-2 placeholder:text-muted"
-                    />
-                    <input
-                      type="password"
-                      value={importPassword}
-                      onChange={(e) => setImportPassword(e.target.value)}
-                      placeholder="Your wallet password to encrypt..."
-                      className="w-full bg-input-field border border-ui rounded-xl p-3 text-xs text-main focus:border-brand-cyan/50 outline-none transition-colors placeholder:text-muted"
-                    />
-                    {importError && <p className="text-[10px] text-red-400">{importError}</p>}
-                    <button
-                      disabled={importLoading || !importPK || !importPassword}
-                      onClick={async () => {
-                        setImportLoading(true);
-                        setImportError('');
-                        try {
-                          const cleanPK = importPK.trim().startsWith('0x') ? importPK.trim() : `0x${importPK.trim()}`;
-                          const wallet = new ethers.Wallet(cleanPK);
-                          const success = await onImportAccount?.({
-                            address: wallet.address,
-                            privateKey: wallet.privateKey
-                          }, importPassword);
-                          
-                          if (success) {
-                            setShowAccountPicker(false);
-                            setIsImporting(false);
-                            setImportPK('');
-                            setImportPassword('');
-                          } else {
-                            setImportError('Incorrect password');
-                          }
-                        } catch (e) {
-                          setImportError('Invalid private key');
-                        }
-                        setImportLoading(false);
-                      }}
-                      className="w-full bg-brand-cyan hover:bg-brand-cyan/80 disabled:opacity-50 disabled:cursor-not-allowed text-brand-midnight py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2"
-                    >
-                      {importLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : 'Import Key'}
-                    </button>
-                  </div>
-                )}
-
-                {!mnemonic && (
-                  <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 flex gap-2">
-                    <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
-                    <p className="text-[10px] text-amber-200">
-                      Multi-account support requires a recovery phrase. Currently using a direct private key.
-                    </p>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      <AccountPicker
+        open={showAccountPicker}
+        onClose={() => setShowAccountPicker(false)}
+        address={address}
+        mnemonic={mnemonic}
+        accountIndex={accountIndex}
+        accountCount={accountCount}
+        importedAccounts={importedAccounts}
+        onAccountChange={onAccountChange}
+        onImportAccount={onImportAccount}
+        onAddHD={(newCount) => {
+          setAccountCount(newCount);
+          chrome.storage.local.set({ accountCount: newCount });
+        }}
+      />
 
       {/* Token Picker Modal */}
       <AnimatePresence>
@@ -894,7 +771,11 @@ export default function Dashboard({
                   <button
                     key={token.address}
                     onClick={() => {
-                      onNavigate(showTokenPicker.action, { symbol: token.symbol, address: token.address, decimals: token.decimals });
+                      onNavigate(showTokenPicker.action, {
+                        symbol: token.symbol,
+                        address: token.address,
+                        decimals: token.decimals,
+                      });
                       setShowTokenPicker({ open: false, action: 'send' });
                     }}
                     className="w-full p-4 bg-surface border border-ui hover:border-brand-cyan transition-all flex items-center justify-between group"
@@ -911,7 +792,9 @@ export default function Dashboard({
                     <div className="text-right">
                       <div className="font-brand font-bold text-sm">{token.balance}</div>
                       {showTokenPicker.action === 'wrap' && (
-                        <div className="text-[9px] text-brand-cyan font-bold uppercase tracking-widest">Supports FHE</div>
+                        <div className="text-[9px] font-bold uppercase tracking-widest text-brand-cyan">
+                          FHERC20
+                        </div>
                       )}
                     </div>
                   </button>

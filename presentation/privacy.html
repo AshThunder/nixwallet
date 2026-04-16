@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NixWallet Privacy Policy</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg: #020617;
+            --surface: #0f172a;
+            --border: rgba(255,255,255,0.08);
+            --cyan: #22d3ee;
+            --white: #f8fafc;
+            --sub: #94a3b8;
+            --muted: #64748b;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--white);
+            font-family: "Inter", sans-serif;
+            line-height: 1.7;
+        }
+
+        .mono { font-family: "JetBrains Mono", monospace; }
+
+        .wrap {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem 1.25rem 4rem;
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2.5rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1rem;
+        }
+
+        .brand {
+            font-weight: 900;
+            letter-spacing: -0.03em;
+            text-transform: uppercase;
+            font-size: 1.1rem;
+        }
+
+        .brand span { color: var(--cyan); }
+
+        .links {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .links a {
+            color: var(--sub);
+            text-decoration: none;
+            border: 1px solid var(--border);
+            padding: 0.45rem 0.75rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            transition: all 0.2s;
+        }
+
+        .links a:hover {
+            color: var(--cyan);
+            border-color: var(--cyan);
+        }
+
+        h1 {
+            font-size: clamp(2rem, 5vw, 3rem);
+            line-height: 1.15;
+            letter-spacing: -0.03em;
+            margin-bottom: 0.35rem;
+        }
+
+        .updated {
+            color: var(--sub);
+            font-size: 0.9rem;
+            margin-bottom: 1.8rem;
+        }
+
+        .intro {
+            color: var(--sub);
+            margin-bottom: 2rem;
+            font-size: 1rem;
+        }
+
+        section {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+        }
+
+        h2 {
+            font-size: 1.1rem;
+            margin-bottom: 0.65rem;
+            color: var(--cyan);
+            letter-spacing: -0.01em;
+        }
+
+        p + p { margin-top: 0.75rem; }
+
+        ul {
+            margin-top: 0.65rem;
+            padding-left: 1rem;
+        }
+
+        li { margin-bottom: 0.35rem; color: var(--sub); }
+
+        p { color: var(--sub); }
+
+        a { color: var(--cyan); }
+
+        .note {
+            margin-top: 1.5rem;
+            color: var(--muted);
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+    <main class="wrap">
+        <header class="topbar">
+            <div class="brand">Nix<span>Wallet</span></div>
+            <nav class="links mono">
+                <a href="/">Home</a>
+                <a href="https://github.com/AshThunder/nixwallet" target="_blank" rel="noreferrer">GitHub</a>
+            </nav>
+        </header>
+
+        <h1>Privacy Policy</h1>
+        <p class="updated"><strong>Last updated:</strong> April 16, 2026</p>
+        <p class="intro">
+            This Privacy Policy explains how NixWallet handles information when you use the NixWallet browser extension and related website pages.
+            NixWallet is designed as a self-custodial wallet and does not run a centralized backend that stores wallet profiles or private keys.
+        </p>
+
+        <section>
+            <h2>1. Information We Collect</h2>
+            <p>NixWallet does not collect personal information on our own servers.</p>
+            <p>The extension stores wallet data locally in your browser storage to provide core functionality, including:</p>
+            <ul>
+                <li>Encrypted vault data and wallet configuration</li>
+                <li>Account metadata, selected address, and network preferences</li>
+                <li>Custom token metadata and local address book entries</li>
+                <li>Local activity history and UI settings (for example auto-lock timeout)</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>2. How We Use Information</h2>
+            <p>Local data is used only to operate wallet features such as account management, transaction preparation, confidential token operations, and session security.</p>
+            <p>NixWallet does not use local wallet data for advertising, profiling, or unrelated analytics.</p>
+        </section>
+
+        <section>
+            <h2>3. Blockchain and Network Requests</h2>
+            <p>
+                To function as a wallet, NixWallet sends JSON-RPC requests and transaction data to blockchain infrastructure and related cryptographic services.
+                These requests may include wallet addresses, transaction payloads, and technical metadata required to process on-chain actions.
+            </p>
+            <p>
+                Third-party RPC/API providers may receive your IP address and request metadata under their own privacy terms.
+                NixWallet does not sell this information and does not run ad tracking.
+            </p>
+        </section>
+
+        <section>
+            <h2>4. Chrome Permissions</h2>
+            <p>NixWallet requests Chrome extension permissions only for wallet operation:</p>
+            <ul>
+                <li><strong>storage</strong>: persist encrypted local wallet and settings</li>
+                <li><strong>activeTab</strong>: user-initiated wallet interactions with the current tab</li>
+                <li><strong>scripting</strong>: inject wallet provider bridge for dApp communication</li>
+                <li><strong>sidePanel</strong>: render wallet UI in Chrome Side Panel</li>
+                <li><strong>host permissions</strong>: enable provider injection for dApps across user-visited sites</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>5. Data Sharing and Sale</h2>
+            <p>NixWallet does not sell personal data.</p>
+            <p>NixWallet does not transfer user data to data brokers or advertisers.</p>
+            <p>Data may be disclosed only when legally required (for example, valid legal process) or to protect users and comply with applicable law.</p>
+        </section>
+
+        <section>
+            <h2>6. Data Retention and Deletion</h2>
+            <p>Because wallet data is stored locally, you control retention.</p>
+            <p>You can remove extension data by clearing wallet data in the extension, uninstalling the extension, or clearing browser extension storage.</p>
+            <p>On-chain transaction data cannot be deleted because blockchains are public ledgers.</p>
+        </section>
+
+        <section>
+            <h2>7. Security</h2>
+            <p>
+                NixWallet uses client-side encryption for vault storage and includes auto-lock controls.
+                No security measure is perfect; you are responsible for safeguarding your device, password, private keys, and recovery phrase.
+            </p>
+        </section>
+
+        <section>
+            <h2>8. Children's Privacy</h2>
+            <p>NixWallet is not directed to children under 13 (or the minimum age required by local law), and we do not knowingly collect children's personal information.</p>
+        </section>
+
+        <section>
+            <h2>9. Changes to This Policy</h2>
+            <p>We may update this Privacy Policy from time to time. Updates will be published on this page with a revised "Last updated" date.</p>
+        </section>
+
+        <section>
+            <h2>10. Contact</h2>
+            <p>
+                For privacy questions, please open an issue at
+                <a href="https://github.com/AshThunder/nixwallet/issues" target="_blank" rel="noreferrer">github.com/AshThunder/nixwallet/issues</a>.
+            </p>
+        </section>
+
+        <p class="note">This page is intended for transparency and Chrome Web Store disclosure. It does not replace independent legal advice.</p>
+    </main>
+</body>
+</html>

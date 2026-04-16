@@ -2,17 +2,11 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Plus, Search, Trash2, Loader2, AlertCircle, CheckCircle, Bitcoin, DollarSign } from 'lucide-react';
 import { getProvider, shortenAddress } from '../lib/wallet';
+import { getCustomTokens, saveCustomTokens, type TokenMetadata } from '../lib/tokens';
 import { ethers } from 'ethers';
 
-interface TokenMetadata {
-  address: string;
-  symbol: string;
-  decimals: number;
-  name: string;
-}
-
 interface Props {
-  network: any;
+  network: { id: string; [k: string]: unknown };
   onBack: () => void;
 }
 
@@ -32,22 +26,16 @@ export default function ManageTokens({ network, onBack }: Props) {
 
   useEffect(() => {
     loadTokens();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- loadTokens uses network.id from closure
   }, [network.id]);
 
   const loadTokens = async () => {
-    if (typeof chrome !== 'undefined' && chrome.storage) {
-      const key = `custom_tokens_${network.id}`;
-      const res = await chrome.storage.local.get([key]);
-      const tokens = res[key] as TokenMetadata[];
-      setCustomTokens(tokens || []);
-    }
+    const tokens = await getCustomTokens(network.id);
+    setCustomTokens(tokens);
   };
 
-  const saveTokens = async (tokens: TokenMetadata[]) => {
-    if (typeof chrome !== 'undefined' && chrome.storage) {
-      const key = `custom_tokens_${network.id}`;
-      await chrome.storage.local.set({ [key]: tokens });
-    }
+  const handleSaveTokens = async (tokens: TokenMetadata[]) => {
+    await saveCustomTokens(network.id, tokens);
     setCustomTokens(tokens);
   };
 
@@ -77,8 +65,7 @@ export default function ManageTokens({ network, onBack }: Props) {
       ]);
 
       setMetadata({ address, name, symbol, decimals: Number(decimals) });
-    } catch (e) {
-      console.error(e);
+    } catch {
       setError('Could not fetch token data. Is this an ERC-20 contract?');
     } finally {
       setLoading(false);
@@ -88,7 +75,7 @@ export default function ManageTokens({ network, onBack }: Props) {
   const handleAdd = async () => {
     if (!metadata) return;
     const newTokens = [...customTokens, metadata];
-    await saveTokens(newTokens);
+    await handleSaveTokens(newTokens);
     setMetadata(null);
     setAddress('');
     setSuccess(true);
@@ -97,11 +84,11 @@ export default function ManageTokens({ network, onBack }: Props) {
 
   const handleRemove = async (addr: string) => {
     const newTokens = customTokens.filter(t => t.address.toLowerCase() !== addr.toLowerCase());
-    await saveTokens(newTokens);
+    await handleSaveTokens(newTokens);
   };
 
   return (
-    <div className="w-[360px] h-[600px] bg-app text-main font-sans flex flex-col relative overflow-hidden">
+    <div className="w-full min-h-screen bg-app text-main font-sans flex flex-col relative overflow-hidden">
       <div className="absolute top-[-50px] right-[-50px] w-48 h-48 bg-brand-cyan/10 blur-[80px]" />
       
       <header className="p-6 flex items-center gap-4 border-b border-ui relative z-10">
@@ -166,6 +153,12 @@ export default function ManageTokens({ network, onBack }: Props) {
                 >
                   <Plus className="w-4 h-4" /> Add to Wallet
                 </button>
+
+                <div className="pt-2 border-t border-ui">
+                  <div className="text-[9px] text-muted font-mono uppercase opacity-70">
+                    FHERC20 wrappers are deployed automatically via the on-chain registry when you first wrap this token.
+                  </div>
+                </div>
               </div>
             </motion.div>
           )}

@@ -1,7 +1,8 @@
 import { getActiveNetwork } from './lib/wallet';
 
 // Background service worker for the NixWallet extension
-console.log('NixWallet background initialized');
+
+chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 
 // Track internal lock state
 let isUnlocked = false;
@@ -19,7 +20,7 @@ function startAutoLockTimer() {
     const timeout = settings.autoLockTimeout || DEFAULT_TIMEOUT;
 
     if (Date.now() - lastActivity > timeout) {
-      console.log('Auto-locking NixWallet due to inactivity');
+      
       isUnlocked = false;
       // Broadcast lock event to all tabs/popup
       chrome.runtime.sendMessage({ type: 'VAULT_LOCKED' }).catch(() => {});
@@ -28,12 +29,11 @@ function startAutoLockTimer() {
 }
 
 chrome.runtime.onInstalled.addListener(() => {
-  console.log('NixWallet installed');
   startAutoLockTimer();
 });
 
 // Listener for messages from Popup and Content Scripts
-chrome.runtime.onMessage.addListener((message: any, _sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void) => {
+chrome.runtime.onMessage.addListener((message: { type?: string; payload?: { id?: number; method: string; params?: unknown[] } }, _sender: chrome.runtime.MessageSender, sendResponse: (response?: unknown) => void) => {
   lastActivity = Date.now();
   
   if (message.type === 'VAULT_UNLOCKED') {
@@ -52,17 +52,22 @@ chrome.runtime.onMessage.addListener((message: any, _sender: chrome.runtime.Mess
     return true;
   }
 
-  if (message.type === 'RPC_REQUEST') {
+  if (message.type === 'KEEP_ALIVE') {
+    sendResponse({ ok: true });
+    return true;
+  }
+
+  if (message.type === 'RPC_REQUEST' && message.payload) {
     handleRpcRequest(message.payload)
       .then(result => sendResponse({ result }))
-      .catch(error => sendResponse({ error: error.message }));
+      .catch((error: Error) => sendResponse({ error: error.message }));
     return true; 
   }
-  
-  return true;
+
+  return false;
 });
 
-async function handleRpcRequest(payload: { id?: number; method: string; params?: any[] }) {
+async function handleRpcRequest(payload: { id?: number; method: string; params?: unknown[] }) {
   const { method, params } = payload;
   const network = getActiveNetwork();
 
@@ -97,6 +102,7 @@ async function handleRpcRequest(payload: { id?: number; method: string; params?:
           params: params || []
         })
       });
+      if (!response.ok) throw new Error(`RPC request failed: HTTP ${response.status}`);
       const data = await response.json();
       if (data.error) throw new Error(data.error.message);
       return data.result;

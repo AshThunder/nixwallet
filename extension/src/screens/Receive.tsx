@@ -24,16 +24,14 @@ export default function Receive({ address, onBack }: Props) {
           title: 'NixWallet Address',
           text: address,
         });
-      } catch (err) {
-        console.error('Share failed:', err);
-      }
+      } catch { /* share cancelled or unsupported */ }
     } else {
       handleCopy();
     }
   };
 
   return (
-    <div className="w-[360px] h-[600px] overflow-hidden bg-app text-main font-sans relative flex flex-col">
+    <div className="w-full min-h-screen overflow-hidden bg-app text-main font-sans relative flex flex-col">
       <div className="absolute top-[-100px] left-[-100px] w-64 h-64 bg-brand-cyan/10 mix-blend-screen filter blur-[100px]" />
 
       <header className="w-full p-6 flex items-center gap-4 relative z-10 border-b border-ui">
@@ -107,7 +105,7 @@ export default function Receive({ address, onBack }: Props) {
 
       <div className="p-8 text-center relative z-10">
         <p className="text-[9px] text-muted font-bold uppercase tracking-widest leading-relaxed">
-          Make sure to only send assets on the <span className="text-brand-cyan">Fhenix Testnet</span> to this address.
+          Make sure to only send assets on <span className="text-brand-cyan">Ethereum Sepolia</span> to this address.
         </p>
       </div>
     </div>

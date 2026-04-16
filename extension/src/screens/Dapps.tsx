@@ -6,7 +6,7 @@ interface Props {
 
 export default function DappsScreen({ onBack }: Props) {
   return (
-    <div className="w-[360px] h-[600px] bg-app text-main font-sans flex flex-col relative overflow-hidden">
+    <div className="w-full min-h-screen bg-app text-main font-sans flex flex-col relative overflow-hidden">
       {/* Background glow */}
       <div className="absolute top-[100px] left-[-100px] w-64 h-64 bg-brand-cyan/5 mix-blend-screen filter blur-[100px]" />
 

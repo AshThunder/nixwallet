@@ -3,7 +3,7 @@
  */
 import { ethers } from 'ethers';
 
-// Fhenix network configs
+/** Ethereum Sepolia only (CoFHE + extension RPC + deploy target must match). */
 export const FHENIX_NETWORKS = {
   sepolia: {
     id: 'sepolia',
@@ -13,24 +13,6 @@ export const FHENIX_NETWORKS = {
     explorer: 'https://sepolia.etherscan.io',
     symbol: 'ETH',
     isComingSoon: false,
-  },
-  base: {
-    id: 'base',
-    name: 'Base Testnet',
-    rpc: '',
-    chainId: 84532,
-    explorer: 'https://sepolia.basescan.org',
-    symbol: 'ETH',
-    isComingSoon: true,
-  },
-  arbitrum: {
-    id: 'arbitrum',
-    name: 'Arbitrum Sepolia',
-    rpc: '',
-    chainId: 421614,
-    explorer: 'https://sepolia.arbiscan.io',
-    symbol: 'ETH',
-    isComingSoon: true,
   },
 } as const;
 
@@ -52,8 +34,12 @@ export function setActiveNetwork(id: NetworkId) {
 export async function loadNetwork(): Promise<NetworkId> {
   if (typeof chrome !== 'undefined' && chrome.storage) {
     const result = await chrome.storage.local.get(['activeNetwork']);
-    if (result.activeNetwork && FHENIX_NETWORKS[result.activeNetwork as NetworkId]) {
-      _activeNetwork = result.activeNetwork as NetworkId;
+    const id = result.activeNetwork as NetworkId | undefined;
+    if (id && id in FHENIX_NETWORKS) {
+      _activeNetwork = id;
+    } else if (id && !(id in FHENIX_NETWORKS)) {
+      _activeNetwork = 'sepolia';
+      await chrome.storage.local.set({ activeNetwork: 'sepolia' });
     }
   }
   return _activeNetwork;

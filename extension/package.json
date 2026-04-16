@@ -1,11 +1,12 @@
 {
-  "name": "extension",
+  "name": "nixwallet",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "package": "tsc -b && vite build && cd dist && zip -r ../nixwallet-1.0.0.zip .",
     "lint": "eslint .",
     "preview": "vite preview"
   },

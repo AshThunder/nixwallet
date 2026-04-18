@@ -6,6 +6,8 @@ Introducing **NixWallet**: a self-custodial Chrome extension wallet that wraps e
 
 Built for the **Fhenix** stack and **Fully Homomorphic Encryption (FHE)** — shield, run wallet logic against ciphertext, and unwrap back to public tokens when you choose.
 
+**Demo video:** [YouTube — NixWallet walkthrough](https://youtu.be/QyfxLNSE_MQ)
+
 ---
 
 ## Why we built this

@@ -75,7 +75,7 @@ export default function UnlockScreen({ onUnlock }: Props) {
           <button
             onClick={handleUnlock}
             disabled={loading || !password}
-            className="w-full bg-brand-cyan text-brand-midnight py-5 text-label-caps font-bold shadow-[0_0_20px_rgba(10,217,220,0.2)] disabled:opacity-20 flex items-center justify-center gap-3 active:scale-[0.98] transition-all"
+            className="w-full bg-brand-cyan text-brand-midnight py-5 text-label-caps font-bold shadow-[0_0_20px_rgba(10,217,220,0.2)] disabled:cursor-not-allowed disabled:bg-surface disabled:text-muted disabled:border disabled:border-ui disabled:shadow-none flex items-center justify-center gap-3 active:scale-[0.98] transition-all"
           >
             {loading ? 'Unlocking...' : 'Unlock'} <ArrowRight className="w-4 h-4" />
           </button>

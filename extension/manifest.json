@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "NixWallet",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Confidential crypto wallet powered by Fhenix FHE. Shield ERC-20 tokens, send privately, and manage encrypted balances on-chain.",
   "icons": {
     "16": "branding_icon16.png",
@@ -32,7 +32,7 @@
       "run_at": "document_start"
     }
   ],
-  "permissions": ["storage", "activeTab", "scripting", "sidePanel"],
+  "permissions": ["storage", "sidePanel"],
   "host_permissions": ["<all_urls>"],
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"

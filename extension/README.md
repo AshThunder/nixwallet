@@ -2,12 +2,15 @@
 
 The Chrome extension frontend for NixWallet — a confidential wallet powered by Fhenix FHE.
 
+**First-time local install (clone → build → Load unpacked):** see **[LOCAL_SETUP.md](./LOCAL_SETUP.md)**.
+
 ## Development
 
 ```bash
 npm install
-npm run dev     # Start Vite dev server with HMR
-npm run build   # Production build to dist/
+npm run dev      # Start Vite dev server with HMR
+npm run build    # Production build to dist/
+npm run package  # build + zip for Chrome Web Store (see STORE_LISTING.md)
 ```
 
 ## Architecture
@@ -19,8 +22,8 @@ The extension is built with React 19, TypeScript, Tailwind CSS v4, and Vite. It 
 | File | Purpose |
 |------|---------|
 | `src/App.tsx` | Main router, vault lifecycle, auto-lock listener |
-| `src/background.ts` | Service worker: auto-lock timer, RPC proxy |
-| `public/manifest.json` | Extension manifest (side panel, permissions) |
+| `src/background.ts` | Service worker: auto-lock timer, RPC proxy, `KEEP_ALIVE` |
+| `manifest.json` | Extension manifest (side panel, permissions, content scripts) |
 
 ### Screens (`src/screens/`)
 
@@ -30,7 +33,7 @@ The extension is built with React 19, TypeScript, Tailwind CSS v4, and Vite. It 
 | `Send.tsx` | Public ETH/ERC-20 transfers and confidential FHERC20 transfers |
 | `WrapUnwrap.tsx` | Shield/unshield tokens via FHERC20 wrappers, batch claim |
 | `Receive.tsx` | QR code and address display |
-| `ManageTokens.tsx` | Add/remove custom ERC-20 tokens |
+| `ManageTokens.tsx` | Saved token list, Sepolia discovery (explorers + log fallback), tabs / filter / pagination |
 | `Settings.tsx` | Security, address book, networks, about |
 | `Onboarding.tsx` | Wallet creation and seed phrase backup |
 | `Unlock.tsx` | Password entry for vault decryption |
@@ -48,6 +51,8 @@ The extension is built with React 19, TypeScript, Tailwind CSS v4, and Vite. It 
 | `contracts.ts` | FHERC20 registry + wrapper interaction helpers |
 | `contacts.ts` | Unified address book (shared by Send + Settings) |
 | `activity.ts` | Transaction history storage and retrieval |
+| `tokens.ts` | Persisted custom ERC-20 list helpers |
+| `detectTokens.ts` | Suggested tokens on Sepolia (Etherscan, Blockscout, `getLogs`, balance probes) |
 
 ## Loading in Chrome
 

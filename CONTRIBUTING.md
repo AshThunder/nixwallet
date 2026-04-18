@@ -6,9 +6,9 @@ Thank you for your interest in contributing to NixWallet!
 
 1. Fork the repository
 2. Clone your fork: `git clone https://github.com/<your-username>/nixwallet.git`
-3. Install dependencies: `cd extension && npm install`
-4. Start the dev server: `npm run dev`
-5. Load the `extension/dist` folder as an unpacked extension in Chrome
+3. **Extension:** `cd extension && npm install` — then `npm run dev` (Vite + HMR) or `npm run build` for a production bundle
+4. **Contracts (optional):** `cd hardhat && pnpm install` — see `hardhat/README.md` for `compile` / `deploy`
+5. Load the **`extension/dist`** folder as an unpacked extension in Chrome (after `npm run build` in `extension/`)
 
 ## Development Guidelines
 

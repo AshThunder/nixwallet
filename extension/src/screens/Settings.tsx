@@ -395,12 +395,13 @@ export default function SettingsScreen({ mnemonic, onBack, onReset, onNetworkCha
       </div>
       <div>
         <h2 className="text-xl font-brand font-bold uppercase tracking-tighter text-main">NixWallet</h2>
-        <p className="text-xs text-sub font-mono tracking-widest mt-1">v1.0.0</p>
+        <p className="text-xs text-sub font-mono tracking-widest mt-1">v1.0.1</p>
       </div>
       <p className="text-sm text-sub leading-relaxed">
         The premier confidential wallet powered by the Fhenix coFHE network. Built for privacy, speed, and seamless access to the decentralized web.
       </p>
       <div className="pt-4 border-t border-ui space-y-2">
+        <a href="https://nixwallet.vercel.app" target="_blank" rel="noreferrer" className="block text-brand-cyan text-sm hover:underline">nixwallet.vercel.app</a>
         <a href="https://fhenix.io" target="_blank" rel="noreferrer" className="block text-brand-cyan text-sm hover:underline">fhenix.io</a>
         <a href="https://x.com/fhenix" target="_blank" rel="noreferrer" className="block text-brand-cyan text-sm hover:underline">X: @fhenix</a>
         <a href="https://x.com/ChrisGold__" target="_blank" rel="noreferrer" className="block text-brand-cyan text-sm hover:underline">X: @ChrisGold__ (Creator)</a>

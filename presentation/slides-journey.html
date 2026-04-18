@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NixWallet — User walkthrough</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg: #020617;
+            --surface: #0f172a;
+            --border: rgba(255,255,255,0.08);
+            --cyan: #22d3ee;
+            --cyan-dim: rgba(34,211,238,0.12);
+            --cyan-glow: rgba(34,211,238,0.35);
+            --white: #f8fafc;
+            --sub: #94a3b8;
+            --muted: #475569;
+            /* Readable when the deck shares the screen with the extension (~half width). */
+            --journey-text-max: min(92vw, 44rem);
+        }
+
+        html {
+            font-size: clamp(19px, 0.55vw + 14px, 30px);
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--white);
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            width: 100vw; height: 100vh;
+            cursor: default;
+            user-select: none;
+        }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+
+        #deck { position: relative; width: 100%; height: 100%; }
+        .slide {
+            position: absolute; inset: 0;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            padding: clamp(1.75rem, 3vh, 3.5rem) clamp(1.25rem, 4vw, 4.5rem);
+            opacity: 0;
+            transform: translateX(60px);
+            transition: opacity 0.5s cubic-bezier(.16,1,.3,1), transform 0.5s cubic-bezier(.16,1,.3,1);
+            pointer-events: none;
+            z-index: 0;
+        }
+        .slide.active {
+            opacity: 1; transform: translateX(0);
+            pointer-events: auto; z-index: 1;
+        }
+        .slide.exiting {
+            opacity: 0; transform: translateX(-60px);
+        }
+
+        .glow {
+            position: fixed; z-index: 0;
+            width: 700px; height: 700px;
+            border-radius: 50%;
+            background: radial-gradient(circle, var(--cyan-glow) 0%, transparent 60%);
+            filter: blur(120px); opacity: 0.25;
+            pointer-events: none;
+        }
+        .glow-1 { top: -200px; right: -200px; }
+        .glow-2 { bottom: -200px; left: -200px; opacity: 0.15; }
+
+        .slide-label {
+            font-size: clamp(0.8rem, 1.5vw, 1.15rem);
+            font-weight: 700;
+            letter-spacing: 0.2em; text-transform: uppercase;
+            color: var(--cyan); margin-bottom: clamp(1rem, 2vh, 1.75rem);
+        }
+        .slide h1 {
+            font-size: clamp(3rem, 11vw, 7.5rem);
+            font-weight: 900; letter-spacing: -0.05em;
+            text-transform: uppercase; line-height: 0.92;
+            text-align: center;
+        }
+        .slide h1 span { color: var(--cyan); text-shadow: 0 0 48px var(--cyan-glow); }
+        .slide h2 {
+            font-size: clamp(2rem, 6.5vw, 4rem);
+            font-weight: 800; letter-spacing: -0.03em;
+            line-height: 1.1; text-align: center;
+            margin-bottom: clamp(1rem, 2vh, 1.75rem);
+        }
+        .slide p {
+            font-size: clamp(1.2rem, 2.6vw, 1.75rem);
+            color: var(--sub);
+            max-width: var(--journey-text-max);
+            text-align: center;
+            line-height: 1.55;
+        }
+        .slide p strong { color: var(--white); }
+
+        .slide code.mono {
+            font-size: 0.92em;
+            color: var(--cyan);
+        }
+
+        .step-list {
+            margin-top: clamp(1.25rem, 2.5vh, 2rem);
+            max-width: var(--journey-text-max);
+            text-align: left;
+            list-style: none;
+        }
+        .step-list li {
+            font-size: clamp(1.05rem, 2.2vw, 1.45rem);
+            color: var(--sub);
+            line-height: 1.5;
+            padding: 0.55rem 0 0.55rem 1.15rem;
+            border-left: 3px solid var(--cyan-dim);
+            margin-bottom: 0.35rem;
+        }
+        .step-list li strong { color: var(--white); }
+
+        .link-row {
+            display: flex; gap: 1rem; margin-top: 1.75rem;
+            flex-wrap: wrap; justify-content: center;
+        }
+        .link-row a {
+            padding: clamp(0.85rem, 1.5vh, 1.1rem) clamp(1.25rem, 2.5vw, 1.75rem);
+            font-size: clamp(0.85rem, 1.5vw, 1.05rem);
+            font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.08em;
+            text-decoration: none; transition: all 0.3s;
+            border: 1px solid var(--border); color: var(--sub);
+        }
+        .link-row a:hover { border-color: var(--cyan); color: var(--cyan); }
+        .link-row a.primary {
+            background: var(--cyan); color: var(--bg); border-color: var(--cyan);
+            box-shadow: 0 0 15px var(--cyan-glow);
+        }
+
+        .slide .built-by {
+            font-size: clamp(1.4rem, 3.5vw, 2.5rem);
+            font-weight: 900;
+            letter-spacing: 0.04em;
+            color: var(--white);
+            text-align: center;
+            line-height: 1.1;
+            margin-bottom: clamp(0.75rem, 2vh, 1.5rem);
+        }
+        .slide .built-by span {
+            color: var(--cyan);
+            text-shadow: 0 0 36px var(--cyan-glow);
+        }
+
+        #progress {
+            position: fixed; bottom: 0; left: 0;
+            height: 5px; background: var(--cyan);
+            transition: width 0.4s ease; z-index: 100;
+            box-shadow: 0 0 12px var(--cyan-glow);
+        }
+        #counter {
+            position: fixed; bottom: clamp(1rem, 2vh, 1.75rem); right: clamp(1rem, 2.5vw, 2.25rem);
+            font-size: clamp(0.8rem, 1.4vw, 1.05rem);
+            color: var(--muted);
+            letter-spacing: 0.1em; z-index: 100;
+        }
+        #nav-hint {
+            position: fixed; bottom: clamp(1rem, 2vh, 1.75rem); left: clamp(1rem, 2.5vw, 2.25rem);
+            font-size: clamp(0.7rem, 1.2vw, 0.95rem);
+            color: var(--muted);
+            letter-spacing: 0.08em; text-transform: uppercase;
+            z-index: 100;
+            max-width: min(48vw, 22rem);
+            line-height: 1.35;
+        }
+    </style>
+</head>
+<body>
+
+<div class="glow glow-1"></div>
+<div class="glow glow-2"></div>
+
+<div id="deck">
+
+    <div class="slide active" data-slide="0">
+        <div class="slide-label mono">Start · What is this?</div>
+        <h1>NIX<span>WALLET</span></h1>
+        <p style="margin-top:1.25rem;"><strong>NixWallet</strong> is a <strong>self-custodial</strong> Chrome extension wallet for the <strong>Fhenix</strong> stack: it wraps everyday <strong>ERC-20s</strong> into <strong>FHERC20</strong> confidential assets, sends <strong>encrypted amounts</strong> with <strong>coFHE</strong>, and keeps <strong>shield → use → unwrap</strong> one click away in the <strong>side panel</strong>—with public ETH/ERC-20 send and receive and an on-chain activity view (live on <strong>Ethereum Sepolia</strong> today).</p>
+        <p style="margin-top:1rem;">This deck walks you through the product <strong>from first install to everyday use</strong>. One slide per step.</p>
+    </div>
+
+    <div class="slide" data-slide="1">
+        <div class="slide-label mono">Step 1 · Add to Chrome</div>
+        <h2>Add the extension <span style="color:var(--cyan)">in Chrome</span></h2>
+        <p><strong>While you build or test:</strong> open <code class="mono">chrome://extensions</code>, turn on <strong>Developer mode</strong>, click <strong>Load unpacked</strong>, and pick the <strong>dist</strong> folder from your build.</p>
+        <p style="margin-top:1rem;"><strong>When it is on the store:</strong> install from the Chrome Web Store like any other extension.</p>
+        <ul class="step-list">
+            <li><strong>Tip:</strong> after a code change, run <strong>build</strong> again, then refresh the extension on the extensions page.</li>
+        </ul>
+    </div>
+
+    <div class="slide" data-slide="2">
+        <div class="slide-label mono">Step 2 · Open it</div>
+        <h2>Open the <span style="color:var(--cyan)">side panel</span></h2>
+        <p>Click the <strong>NixWallet icon</strong> in the Chrome toolbar. The wallet opens on the <strong>side</strong> of the browser. It stays there while you use other sites.</p>
+        <ul class="step-list">
+            <li>If nothing opens, check that the extension is <strong>turned on</strong> in <code class="mono">chrome://extensions</code>.</li>
+        </ul>
+    </div>
+
+    <div class="slide" data-slide="3">
+        <div class="slide-label mono">Step 3 · Onboarding</div>
+        <h2>First time: <span style="color:var(--cyan)">set up</span> your wallet</h2>
+        <p>You can <strong>create a new wallet</strong> or <strong>import</strong> keys you already have.</p>
+        <ul class="step-list">
+            <li><strong>Password</strong> — locks the wallet and protects your saved data.</li>
+            <li><strong>Seed phrase</strong> — 12 words. Write them down and store them safely. They are the <strong>backup</strong> for your wallet.</li>
+            <li><strong>Never</strong> share your seed or password with anyone.</li>
+        </ul>
+        <p style="margin-top:1rem;">When you finish, you land on the <strong>home</strong> screen.</p>
+    </div>
+
+    <div class="slide" data-slide="4">
+        <div class="slide-label mono">Step 4 · Home</div>
+        <h2>The <span style="color:var(--cyan)">dashboard</span></h2>
+        <p>This is your <strong>main screen</strong> after you unlock. You see <strong>balances</strong>, quick actions, and tabs at the bottom.</p>
+        <ul class="step-list">
+            <li><strong>Tokens</strong> — coins and tokens you care about.</li>
+            <li><strong>Activity</strong> — a list of past moves (we cover this later).</li>
+            <li><strong>Discover</strong> — links to learn more about the ecosystem.</li>
+        </ul>
+    </div>
+
+    <div class="slide" data-slide="5">
+        <div class="slide-label mono">Step 5 · Wrap</div>
+        <h2><span style="color:var(--cyan)">Wrap</span> a token (shield)</h2>
+        <p><strong>Wrap</strong> turns a normal testnet token into a <strong>private</strong> form. The amount is handled with <strong>encryption</strong> on the network side.</p>
+        <ul class="step-list">
+            <li>Open <strong>Wrap / Unwrap</strong>, pick a token, enter an amount.</li>
+            <li>You may need to <strong>approve</strong> once so the contract can move your token.</li>
+            <li>After it works, you can <strong>reveal</strong> your private balance on the home screen when you want.</li>
+        </ul>
+    </div>
+
+    <div class="slide" data-slide="6">
+        <div class="slide-label mono">Step 6 · Send</div>
+        <h2><span style="color:var(--cyan)">Send</span> tokens or ETH</h2>
+        <p>Open <strong>Send</strong>. Choose <strong>ETH</strong> or a <strong>token</strong>. Paste the <strong>receiver address</strong>. Enter the <strong>amount</strong>. Check the details, then confirm.</p>
+        <ul class="step-list">
+            <li>You can send in a <strong>normal</strong> way or use <strong>private</strong> flows where the app supports it.</li>
+            <li>Always double-check the <strong>address</strong>. Wrong address means lost funds.</li>
+        </ul>
+    </div>
+
+    <div class="slide" data-slide="7">
+        <div class="slide-label mono">Step 7 · Receive</div>
+        <h2><span style="color:var(--cyan)">Receive</span> funds</h2>
+        <p>Open <strong>Receive</strong>. You see your <strong>address</strong> and a <strong>QR code</strong>. Share the address or let someone scan the code.</p>
+        <ul class="step-list">
+            <li>Use a <strong>testnet faucet</strong> to get free test ETH on <strong>Sepolia</strong> if you need gas.</li>
+            <li>Only send <strong>testnet</strong> assets to this address when you are on testnet.</li>
+        </ul>
+    </div>
+
+    <div class="slide" data-slide="8">
+        <div class="slide-label mono">Step 8 · Add tokens</div>
+        <h2><span style="color:var(--cyan)">Manage</span> tokens</h2>
+        <p>Use <strong>Manage tokens</strong> to add tokens you use often. You can browse <strong>suggested</strong> tokens or add by <strong>contract address</strong>.</p>
+        <ul class="step-list">
+            <li><strong>In your wallet</strong> — ideas from the chain or lists (on Sepolia).</li>
+            <li><strong>Saved</strong> — tokens you chose to keep in the list.</li>
+            <li>Use <strong>search</strong> when the list is long.</li>
+        </ul>
+    </div>
+
+    <div class="slide" data-slide="9">
+        <div class="slide-label mono">Step 9 · Activity</div>
+        <h2><span style="color:var(--cyan)">Activity</span> tab</h2>
+        <p>Open the <strong>Activity</strong> tab on the home screen. You see a <strong>history</strong> of sends, wraps, and other actions.</p>
+        <ul class="step-list">
+            <li>Tap a <strong>link</strong> to open a <strong>block explorer</strong> and see the transaction on the web.</li>
+            <li>Helps you <strong>prove</strong> what happened during a demo or debug.</li>
+        </ul>
+    </div>
+
+    <div class="slide" data-slide="10">
+        <div class="slide-label mono">Step 10 · Settings</div>
+        <h2><span style="color:var(--cyan)">Settings</span></h2>
+        <p>Open the <strong>gear</strong> icon. Here you tune how the wallet behaves.</p>
+        <ul class="step-list">
+            <li><strong>Security</strong> — auto-lock time, clear history, show seed (needs password), delete wallet.</li>
+            <li><strong>Address book</strong> — save names next to addresses for faster sends.</li>
+            <li><strong>Networks</strong> — today the app uses <strong>Sepolia</strong>; more testnets can come later.</li>
+            <li><strong>About</strong> — version and links.</li>
+        </ul>
+    </div>
+
+    <div class="slide" data-slide="11">
+        <div class="slide-label mono">Extra · Discover</div>
+        <h2><span style="color:var(--cyan)">Discover</span> tab</h2>
+        <p>From the home screen, open <strong>Discover</strong>. It lists <strong>helpful links</strong> — docs, the chain, community projects.</p>
+        <p style="margin-top:1rem;">Good place to send someone <strong>after</strong> a demo if they want to read more.</p>
+    </div>
+
+    <div class="slide" data-slide="12">
+        <div class="slide-label mono">End</div>
+        <h2>You are <span style="color:var(--cyan)">ready</span></h2>
+        <p>That is the full path: <strong>install → open → set up → home → wrap → send → receive → tokens → activity → settings</strong>.</p>
+        <p style="margin-top:1rem;">Try the app on <strong>Sepolia</strong>, open the <strong>README</strong> on GitHub for setup, or continue to the <strong>next slide</strong> for links and a thank-you.</p>
+    </div>
+
+    <div class="slide" data-slide="13">
+        <div class="built-by">Built by <span>Chris Gold</span></div>
+        <div class="slide-label mono">Thank you</div>
+        <h1>THANK <span>YOU</span></h1>
+        <p style="margin-top:1.5rem;">Thanks for your time. Questions and feedback welcome.</p>
+        <div class="link-row">
+            <a href="index.html" class="primary">Landing page</a>
+            <a href="slides.html">Tech slides</a>
+            <a href="https://github.com/AshThunder/nixwallet" target="_blank">GitHub</a>
+            <a href="https://x.com/ChrisGold__" target="_blank">@ChrisGold__</a>
+            <a href="https://x.com/fhenix" target="_blank">@Fhenix</a>
+        </div>
+    </div>
+</div>
+
+<div id="progress"></div>
+<div id="counter" class="mono"></div>
+<div id="nav-hint" class="mono">← → or click · left back · right forward</div>
+
+<script>
+    const slides = document.querySelectorAll('.slide');
+    const total = slides.length;
+    let current = 0;
+
+    function syncChrome() {
+        document.getElementById('progress').style.width = ((current + 1) / total * 100) + '%';
+        document.getElementById('counter').textContent = (current + 1) + ' / ' + total;
+    }
+
+    function goTo(n) {
+        if (n < 0 || n >= total || n === current) return;
+        const prev = current;
+        slides[prev].classList.remove('active');
+        slides[prev].classList.add('exiting');
+        current = n;
+        slides[current].classList.add('active');
+        setTimeout(() => slides[prev].classList.remove('exiting'), 500);
+        syncChrome();
+    }
+
+    syncChrome();
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter') { e.preventDefault(); goTo(current + 1); }
+        if (e.key === 'ArrowLeft' || e.key === 'Backspace') { e.preventDefault(); goTo(current - 1); }
+        if (e.key === 'Home') { e.preventDefault(); goTo(0); }
+        if (e.key === 'End') { e.preventDefault(); goTo(total - 1); }
+    });
+
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('a')) return;
+        if (e.clientX < window.innerWidth / 2) goTo(current - 1);
+        else goTo(current + 1);
+    });
+</script>
+
+</body>
+</html>

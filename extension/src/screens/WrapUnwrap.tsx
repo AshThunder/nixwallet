@@ -242,7 +242,7 @@ export default function WrapUnwrap({ address: _address, privateKey, initialToken
     await wrapTx.wait();
     await addActivity({
       id: wrapTx.hash, type: 'wrap', amount: `${amount} c${selectedToken.symbol}`,
-      status: 'success', networkId: network.id, address: _address, isConfidential: true,
+      status: 'success', networkId: network.id, address: _address, hash: wrapTx.hash, isConfidential: true,
     });
   };
 
@@ -368,6 +368,14 @@ export default function WrapUnwrap({ address: _address, privateKey, initialToken
       setStatus('error');
       setStatusMsg(e instanceof Error ? e.message.slice(0, 80) : 'Operation failed');
     }
+  };
+
+  const handleSuccessDoAgain = () => {
+    setStatus('idle');
+    setStatusMsg('');
+    setHashes({});
+    setBatchClaimStatus(null);
+    setAmount('');
   };
 
   return (
@@ -597,13 +605,32 @@ export default function WrapUnwrap({ address: _address, privateKey, initialToken
           )}
         </AnimatePresence>
 
-        <button
-          onClick={handleSubmit}
-          disabled={!amount || parseFloat(amount) <= 0 || status === 'loading' || !registryConfigured}
-          className="w-full bg-brand-cyan text-brand-midnight py-5 text-label-caps font-bold shadow-[0_0_30px_rgba(10,217,220,0.1)] disabled:opacity-20 transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
-        >
-          {status === 'loading' ? 'Processing...' : `Start ${mode === 'wrap' ? 'Wrap' : 'Unwrap'}`}
-        </button>
+        {status === 'success' ? (
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={handleSuccessDoAgain}
+              className="flex-1 bg-brand-cyan text-brand-midnight py-5 text-label-caps font-bold shadow-[0_0_30px_rgba(10,217,220,0.1)] transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
+            >
+              Do again
+            </button>
+            <button
+              type="button"
+              onClick={onBack}
+              className="flex-1 border border-ui bg-transparent text-main py-5 text-label-caps font-bold hover:border-brand-cyan/40 hover:text-brand-cyan transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
+            >
+              Go back
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={handleSubmit}
+            disabled={!amount || parseFloat(amount) <= 0 || status === 'loading' || !registryConfigured}
+            className="w-full bg-brand-cyan text-brand-midnight py-5 text-label-caps font-bold shadow-[0_0_30px_rgba(10,217,220,0.1)] disabled:cursor-not-allowed disabled:bg-surface disabled:text-muted disabled:border disabled:border-ui disabled:shadow-none transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
+          >
+            {status === 'loading' ? 'Processing...' : `Start ${mode === 'wrap' ? 'Wrap' : 'Unwrap'}`}
+          </button>
+        )}
       </div>
     </div>
   );

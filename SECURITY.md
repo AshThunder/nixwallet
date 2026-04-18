@@ -13,13 +13,14 @@ NixWallet handles private keys and seed phrases. The security model is designed 
 | Password | Never stored | Used to derive encryption key, then discarded |
 | Session cache | `chrome.storage.session` | Decrypted vault cached for session auto-unlock; cleared on lock |
 | Address book | `chrome.storage.local` | Plaintext (no sensitive data) |
+| Saved custom tokens | `chrome.storage.local` | Plaintext (contract addresses and metadata only) |
 | Transaction history | `chrome.storage.local` | Plaintext (publicly visible on-chain anyway) |
 
 ### Key Security Features
 
 - **AES-GCM Vault Encryption**: The seed phrase is never stored in plaintext. It is encrypted using a key derived from the user's password via PBKDF2 with a random salt.
 
-- **Auto-Lock Timer**: The wallet automatically locks after a configurable period of inactivity (5, 10, or 30 minutes). The background service worker monitors inactivity and broadcasts `VAULT_LOCKED` to all extension contexts, which clear all sensitive data from memory and transition to the unlock screen.
+- **Auto-Lock Timer**: The wallet automatically locks after a configurable period of inactivity (5, 10, or 30 minutes). The background service worker compares idle time against the threshold and broadcasts `VAULT_LOCKED` when it expires. Idle time resets on extension messages (for example RPC traffic) and on **`KEEP_ALIVE`** pings from the UI, which are sent on common user interactions (click, keydown, scroll, input) so merely keeping the side panel open without interacting still counts as idle after the timeout.
 
 - **Password-Protected Secret Reveal**: Viewing the mnemonic phrase in Settings requires re-entering the wallet password. The phrase auto-hides after 30 seconds to reduce exposure risk.
 

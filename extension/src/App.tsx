@@ -255,6 +255,7 @@ function App() {
     return (
       <ManageTokens
         network={network}
+        walletAddress={address}
         onBack={() => setScreen('dashboard')}
       />
     );

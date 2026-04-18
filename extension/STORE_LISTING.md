@@ -47,7 +47,7 @@ OPEN SOURCE
 NixWallet is fully open source. Review the code, report issues, and contribute:
 https://github.com/AshThunder/nixwallet
 
-Currently live on Ethereum Sepolia testnet. Arbitrum testnet, Base testnet and additional networks coming soon.
+Ships on Ethereum Sepolia today. The same Fhenix stack also targets Base testnet and Arbitrum testnet; switching between these in the extension is coming soon.
 
 ## Category
 
@@ -99,7 +99,7 @@ NixWallet is a cryptocurrency wallet that allows users to manage encrypted token
 ```bash
 cd extension
 npm run package
-# Produces nixwallet-1.0.0.zip in the extension/ directory
+# Produces nixwallet-1.0.1.zip in the extension/ directory
 # Upload this zip at https://chrome.google.com/webstore/devconsole
 ```
 

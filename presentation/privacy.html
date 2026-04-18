@@ -180,10 +180,9 @@
             <p>NixWallet requests Chrome extension permissions only for wallet operation:</p>
             <ul>
                 <li><strong>storage</strong>: persist encrypted local wallet and settings</li>
-                <li><strong>activeTab</strong>: user-initiated wallet interactions with the current tab</li>
-                <li><strong>scripting</strong>: inject wallet provider bridge for dApp communication</li>
                 <li><strong>sidePanel</strong>: render wallet UI in Chrome Side Panel</li>
-                <li><strong>host permissions</strong>: enable provider injection for dApps across user-visited sites</li>
+                <li><strong>host permissions</strong> (<code>&lt;all_urls&gt;</code>): allow the extension’s content script to run on pages where dApps need <code>window.ethereum</code>, and allow the background worker to proxy JSON-RPC to your configured network</li>
+                <li><strong>Manifest content scripts</strong>: load a small bridge on each matched page (no <code>chrome.scripting</code> API); the injected page script talks to the extension via <code>postMessage</code></li>
             </ul>
         </section>
 

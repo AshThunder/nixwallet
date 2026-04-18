@@ -68,7 +68,7 @@
     letter-spacing: 0.1em;
     font-size: 0.65rem;
     font-weight: 600;
-    color: var(--text-muted);
+    /* Intentionally no color: pair with text-main / text-sub / text-muted / text-brand-midnight so CTAs stay high-contrast on cyan */
   }
 
   .bg-grid {

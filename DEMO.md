@@ -55,29 +55,36 @@ Step-by-step walkthrough for demonstrating NixWallet.
 - Click it to batch-claim all pending unshields in a single transaction
 - Show the progress: "Decrypting claim 1/3..." then "Submitting batch claim..."
 
-### 7. Settings Tour
+### 7. Manage Tokens
+
+- From the Dashboard (or token picker flows), open **Manage tokens**
+- Show **In your wallet** vs **Saved** tabs: suggested ERC-20s from explorers / a light log scan (Sepolia) vs tokens the user explicitly saved
+- Use the **filter** to search by name, symbol, or address; note **pagination** for long lists
+- Add a token and point out that a **full rescan** is not triggered on every add (the list updates locally; rescan runs on wallet/network change or after removing a saved token)
+
+### 8. Settings Tour
 
 - Open **Settings** from the gear icon
 - Walk through each category:
   - **Security & Privacy** — Auto-lock timer, password-protected mnemonic viewer (enter password to reveal, auto-hides after 30s), clear transaction history, delete wallet
   - **Address Book** — Add/remove contacts (shared with Send screen)
-  - **Networks** — Show Sepolia (active) and future networks marked "Soon"
+  - **Networks** — Show Sepolia (active); mention **Base testnet** and **Arbitrum testnet** as the other Fhenix-connected testnets targeted for the wallet.
   - **Connected DApps** — Coming Soon overlay
   - **About** — Version, links
 
-### 8. Auto-Lock Demo
+### 9. Auto-Lock Demo
 
 - Set the auto-lock timer to **5 minutes** in Settings > Security
 - Leave the wallet idle
 - After 5 minutes, the wallet automatically locks and shows the unlock screen
 
-### 9. Swap (Coming Soon)
+### 10. Swap (Coming Soon)
 
 - Click **Swap** on the Dashboard
 - Show the "Coming Soon" overlay
 - Explain: "This will integrate a Fhenix DEX router for confidential token swaps"
 
-### 10. Discover
+### 11. Discover
 
 - Switch to the **Discover** tab
 - Show the ecosystem links: Fhenix, CoFHE Docs, Redact Money, CarrotBox
@@ -89,4 +96,4 @@ Step-by-step walkthrough for demonstrating NixWallet.
 - **Why a wallet?** — The entry point for every user. Privacy starts at the wallet level.
 - **What's unique?** — Standard wallets don't support confidential tokens. NixWallet integrates FHE natively, turning any ERC-20 into a confidential token (e.g., USDC to cUSDC).
 - **Registry pattern** — Any ERC-20 can be wrapped into a confidential variant. First user deploys the wrapper; everyone else shares it.
-- **What's next?** — In-wallet swaps, dApp permissions manager, multi-network support, token logos.
+- **What's next?** — In-wallet swaps, dApp permissions manager, Base and Arbitrum testnets in the extension, richer token metadata (e.g. logos).

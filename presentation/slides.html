@@ -93,6 +93,18 @@
         }
         .slide p strong { color: var(--white); }
 
+        .slide .core-list {
+            margin-top: 1.75rem; max-width: 640px; text-align: left;
+            list-style: none;
+        }
+        .slide .core-list li {
+            font-size: 1.05rem; color: var(--sub); line-height: 1.65;
+            padding: 0.65rem 0; padding-left: 1.25rem;
+            border-left: 2px solid var(--cyan-dim);
+            margin-bottom: 0.35rem;
+        }
+        .slide .core-list li strong { color: var(--white); }
+
         /* ── Feature List ────────────────── */
         .feature-list {
             display: grid; grid-template-columns: 1fr 1fr;
@@ -208,86 +220,116 @@
 
 <div id="deck">
 
-    <!-- SLIDE 1: Title -->
+    <!-- 1: Title -->
     <div class="slide active" data-slide="0">
         <div class="slide-label mono">Chrome Extension Wallet</div>
         <h1>NIX<span>WALLET</span></h1>
-        <p style="margin-top: 1.5rem;">A confidential browser wallet built on the Fhenix network, powered by Fully Homomorphic Encryption.</p>
+        <p style="margin-top: 1.5rem;">Self-custodial wallet for <strong>FHERC20</strong> confidential tokens — powered by <strong>Fhenix</strong> and <strong>coFHE</strong>.</p>
     </div>
 
-    <!-- SLIDE 2: The Problem -->
+    <!-- 2: Why we built this -->
     <div class="slide" data-slide="1">
-        <div class="slide-label mono">The Problem</div>
-        <h2>On-Chain Data Is Public</h2>
-        <p>Most wallets today expose your balance, your transfers, and your activity on a public ledger. <strong>Anyone can look it up.</strong> There's no built-in confidentiality layer for EVM users.</p>
+        <div class="slide-label mono">Why we built this</div>
+        <h2>Privacy Starts At The <span style="color:var(--cyan)">Wallet</span></h2>
+        <p>Fhenix makes it possible to run wallet logic on <strong>encrypted balances</strong>, but someone still had to ship the <strong>browser experience</strong>: onboarding, keys, wrap/unwrap, and dApp connectivity.</p>
+        <ul class="core-list">
+            <li><strong>Gap</strong> — Standard wallets only move plaintext ERC-20s; every amount is a billboard on a public chain.</li>
+            <li><strong>Goal</strong> — One Chrome flow that feels like a normal EVM wallet while speaking <strong>FHERC20</strong> and <strong>coFHE</strong>.</li>
+            <li><strong>Principle</strong> — Self-custodial, local-first, <strong>no wallet backend</strong> — only your RPC and the chain.</li>
+        </ul>
     </div>
 
-    <!-- SLIDE 3: The Solution -->
+    <!-- 3: The problem (public ledger) -->
     <div class="slide" data-slide="2">
-        <div class="slide-label mono">The Solution</div>
-        <h2>Compute On <span style="color:var(--cyan)">Encrypted Data</span></h2>
-        <p>Fhenix uses <strong>Fully Homomorphic Encryption (FHE)</strong> — smart contracts can process your tokens without exposing the underlying data. NixWallet brings this directly to your browser.</p>
+        <div class="slide-label mono">Core part · Public amounts</div>
+        <h2>Public Chains, <span style="color:var(--cyan)">Public Amounts</span></h2>
+        <p>On L1, <strong>addresses and tx metadata</strong> are visible like any EVM transaction. For normal ERC-20s, <strong>transfer amounts</strong> and balances are easy to read from logs and explorers.</p>
+        <ul class="core-list">
+            <li>NixWallet does <strong>not</strong> promise full anonymity — it targets <strong>amount / balance confidentiality</strong> for the confidential token leg.</li>
+            <li>Users still need a clear story: <strong>what is encrypted</strong> vs <strong>what stays public</strong>.</li>
+        </ul>
     </div>
 
-    <!-- SLIDE 4: What It Does -->
+    <!-- 4: FHE + FHERC20 -->
     <div class="slide" data-slide="3">
-        <div class="slide-label mono">Core Features</div>
-        <h2>What NixWallet Does</h2>
-        <div class="feature-list">
-            <div class="fl-item"><div class="fl-dot"></div><span>FHE Token Wrapping</span></div>
-            <div class="fl-item"><div class="fl-dot"></div><span>Send & Receive</span></div>
-            <div class="fl-item"><div class="fl-dot"></div><span>Multi-Account HD Wallet</span></div>
-            <div class="fl-item"><div class="fl-dot"></div><span>Address Book</span></div>
-            <div class="fl-item"><div class="fl-dot"></div><span>dApp Discovery</span></div>
-            <div class="fl-item"><div class="fl-dot soon"></div><span>Multi-Network Support</span><div class="fl-badge mono">Soon</div></div>
-            <div class="fl-item"><div class="fl-dot soon"></div><span>In-Wallet Swaps</span><div class="fl-badge mono">Soon</div></div>
-            <div class="fl-item"><div class="fl-dot soon"></div><span>DApp Manager</span><div class="fl-badge mono">Soon</div></div>
-        </div>
+        <div class="slide-label mono">Core part · FHE &amp; FHERC20</div>
+        <h2>FHE &amp; <span style="color:var(--cyan)">FHERC20</span></h2>
+        <p><strong>Fully Homomorphic Encryption</strong> lets contracts update token state from <strong>ciphertext</strong> — observers do not see confidential balances and transfer amounts the same way as on a classic ERC-20.</p>
+        <ul class="core-list">
+            <li><strong>Wrap</strong> — Lock an underlying ERC-20 and hold balance as encrypted FHERC20 (e.g. USDC → cUSDC).</li>
+            <li><strong>coFHE</strong> — Client encrypts inputs; <strong>decryptForView</strong> for UI; <strong>decryptForTx</strong> for proofs the contract accepts.</li>
+        </ul>
     </div>
 
-    <!-- SLIDE 5: Tech Stack -->
+    <!-- 5: Lifecycle: shield → use → unwrap -->
     <div class="slide" data-slide="4">
-        <div class="slide-label mono">Under The Hood</div>
-        <h2>Built With</h2>
+        <div class="slide-label mono">Core part · Lifecycle</div>
+        <h2>Shield → Use → <span style="color:var(--cyan)">Unwrap</span></h2>
+        <p>Everything in the product maps to three pillars users can demo end-to-end on testnet.</p>
+        <ul class="core-list">
+            <li><strong>Shield</strong> — Approve the wrapper, call <strong>shield</strong>, receive confidential balance.</li>
+            <li><strong>Use</strong> — <strong>confidentialTransfer</strong> with an encrypted amount; reveal balance in UI when you choose.</li>
+            <li><strong>Unwrap</strong> — <strong>unshield</strong>, then <strong>claimUnshielded</strong> / <strong>claimUnshieldedBatch</strong> to recover underlying ERC-20.</li>
+        </ul>
+    </div>
+
+    <!-- 6: On-chain registry -->
+    <div class="slide" data-slide="5">
+        <div class="slide-label mono">Core part · Registry</div>
+        <h2>Wrapper <span style="color:var(--cyan)">Registry</span></h2>
+        <p><strong>FHERC20WrapperRegistry</strong> is an on-chain factory: the <strong>first</strong> user to wrap a new ERC-20 pays deployment gas for that token’s wrapper; <strong>everyone else reuses</strong> the same contract.</p>
+        <ul class="core-list">
+            <li>No manual “deploy my confidential token” step for each user.</li>
+            <li>Hardhat-deployed Solidity in-repo — same version control as the extension.</li>
+        </ul>
+    </div>
+
+    <!-- 7: Extension architecture -->
+    <div class="slide" data-slide="6">
+        <div class="slide-label mono">Core part · Extension</div>
+        <h2>Chrome <span style="color:var(--cyan)">Extension</span></h2>
+        <p>Built for <strong>side panel</strong> constraints: fast UI, encrypted vault at rest, background worker for auto-lock and RPC proxy.</p>
+        <ul class="core-list">
+            <li><strong>Vault</strong> — AES-GCM + PBKDF2; keys in memory only while unlocked.</li>
+            <li><strong>dApps</strong> — EIP-1193 <code class="mono" style="color:var(--cyan);font-size:0.9em;">window.ethereum</code> injection for standard requests.</li>
+            <li><strong>Product</strong> — Send/receive, activity, token management, address book, batch unwrap UX.</li>
+        </ul>
+    </div>
+
+    <!-- 8: Tech + networks -->
+    <div class="slide" data-slide="7">
+        <div class="slide-label mono">Stack &amp; rollout</div>
+        <h2>Tech &amp; <span style="color:var(--cyan)">Networks</span></h2>
+        <p>Ships on <strong>Ethereum Sepolia</strong> today. <strong>Base</strong> and <strong>Arbitrum</strong> testnets are next for in-wallet switching — the same Fhenix-connected environments, not a separate “Fhenix mainnet.”</p>
         <div class="pill-row">
             <div class="pill">React 19</div>
             <div class="pill">TypeScript</div>
-            <div class="pill">Vite</div>
+            <div class="pill">Vite · CRXJS</div>
             <div class="pill">Tailwind v4</div>
-            <div class="pill">CRXJS</div>
-            <div class="pill">Framer Motion</div>
-            <div class="pill">Fhenix coFHE SDK</div>
-            <div class="pill">ethers.js v6</div>
+            <div class="pill">coFHE SDK</div>
+            <div class="pill">ethers v6</div>
+            <div class="pill">Hardhat</div>
+            <div class="pill">Solidity 0.8.25</div>
         </div>
     </div>
 
-    <!-- SLIDE 6: Architecture -->
-    <div class="slide" data-slide="5">
-        <div class="slide-label mono">At A Glance</div>
-        <h2>Architecture</h2>
-        <p>Clean, unidirectional. Designed for extension constraints — fast renders, minimal storage, encrypted-first data flow.</p>
-        <div class="stats">
-            <div class="stat"><div class="num">12+</div><div class="lbl">Screens</div></div>
-            <div class="stat"><div class="num">1</div><div class="lbl">Network</div></div>
-            <div class="stat"><div class="num">FHE</div><div class="lbl">Encryption</div></div>
-            <div class="stat"><div class="num">0</div><div class="lbl">External Servers</div></div>
+    <!-- 9: Vision one-liner -->
+    <div class="slide" data-slide="8">
+        <div class="slide-label mono">In one line</div>
+        <div class="quote" style="margin-top:0;">
+            NixWallet is a <strong>confidential browser wallet</strong> for wrapping ERC-20s, moving encrypted amounts, and unwrapping back — with <strong>no centralized wallet server</strong>.
         </div>
     </div>
 
-    <!-- SLIDE 7: Quote / Vision -->
-    <div class="slide" data-slide="6">
-        <div class="quote">
-            "NixWallet is a <strong>confidential browser wallet</strong> that lets you manage encrypted tokens on Fhenix — so your crypto stays yours."
-        </div>
-    </div>
-
-    <!-- SLIDE 8: Thank You / Links -->
-    <div class="slide" data-slide="7">
+    <!-- 10: Thank you -->
+    <div class="slide" data-slide="9">
         <div class="slide-label mono">Created by Chris Gold</div>
         <h2>Thank You</h2>
-        <p style="margin-bottom: 0.5rem;">Let's connect.</p>
+        <p style="margin-bottom: 0.5rem;">Repo, demo, and contact.</p>
         <div class="link-row">
-            <a href="https://github.com/AshThunder/nixwallet" target="_blank" class="primary">GitHub</a>
+            <a href="index.html" class="primary">Landing page</a>
+            <a href="slides-journey.html">Walkthrough slides</a>
+            <a href="https://github.com/AshThunder/nixwallet" target="_blank">GitHub</a>
             <a href="https://x.com/ChrisGold__" target="_blank">@ChrisGold__</a>
             <a href="https://x.com/fhenix" target="_blank">@Fhenix</a>
             <a href="https://fhenix.io" target="_blank">Fhenix.io</a>
@@ -295,8 +337,8 @@
     </div>
 </div>
 
-<div id="progress" style="width: 12.5%"></div>
-<div id="counter" class="mono">1 / 8</div>
+<div id="progress" style="width: 10%"></div>
+<div id="counter" class="mono">1 / 10</div>
 <div id="nav-hint" class="mono">← → or click to navigate</div>
 
 <script>
@@ -306,18 +348,13 @@
 
     function goTo(n) {
         if (n < 0 || n >= total || n === current) return;
-        slides[current].classList.remove('active');
-        slides[current].classList.add('exiting');
-        setTimeout(() => slides[current === 0 ? 0 : current].classList.remove('exiting'), 500);
-
         const prev = current;
+        slides[prev].classList.remove('active');
+        slides[prev].classList.add('exiting');
         current = n;
         slides[current].classList.add('active');
-
-        // Clean up previous after transition
         setTimeout(() => slides[prev].classList.remove('exiting'), 500);
 
-        // Update progress
         document.getElementById('progress').style.width = ((current + 1) / total * 100) + '%';
         document.getElementById('counter').textContent = (current + 1) + ' / ' + total;
     }

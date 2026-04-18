@@ -102,8 +102,11 @@ export default function Dashboard({
         return updated;
       });
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message.slice(0, 80) : 'Failed to connect to network';
-      setFetchError(msg);
+      let msg = e instanceof Error ? e.message.trim() : 'Failed to connect to network';
+      if (msg.length > 72) msg = `${msg.slice(0, 72)}…`;
+      const networkish = /failed to fetch|network request failed|load failed|networkerror|fetch failed|econnrefused|timed out/i.test(msg);
+      if (networkish) msg = `${msg} — it might be a network issue; check your internet connection`;
+      setFetchError(msg.slice(0, 180));
       setTimeout(() => setFetchError(null), 10000);
     }
     setRefreshing(false);
@@ -686,9 +689,21 @@ export default function Dashboard({
                       </span>
                     </div>
                   )}
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted">Transaction ID</span>
-                    <span className="text-main font-mono">#{selectedActivity.id.slice(0, 8)}</span>
+                  <div className="flex justify-between items-center gap-2">
+                    <span className="text-muted shrink-0">Transaction ID</span>
+                    {selectedActivity.hash && network.explorer ? (
+                      <a
+                        href={`${network.explorer}/tx/${selectedActivity.hash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-main font-mono text-[10px] hover:text-brand-cyan flex items-center gap-1 min-w-0 justify-end"
+                      >
+                        <span className="truncate">{selectedActivity.hash.slice(0, 10)}…{selectedActivity.hash.slice(-8)}</span>
+                        <ExternalLink className="w-3 h-3 shrink-0 text-brand-cyan" />
+                      </a>
+                    ) : (
+                      <span className="text-main font-mono text-[10px]">#{selectedActivity.id.slice(0, 8)}</span>
+                    )}
                   </div>
                 </div>
 

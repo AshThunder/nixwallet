@@ -209,7 +209,7 @@ export default function Onboarding({ onComplete }: Props) {
                </div>
                <div className="bg-surface border border-ui p-4 flex justify-between items-center">
                   <span className="text-[8px] font-mono text-muted uppercase tracking-widest">Wallet Version</span>
-                  <span className="text-[9px] font-bold text-sub uppercase tracking-[0.1em]">v1.0.0</span>
+                  <span className="text-[9px] font-bold text-sub uppercase tracking-[0.1em]">v1.0.1</span>
                </div>
             </div>
 
@@ -331,13 +331,13 @@ export default function Onboarding({ onComplete }: Props) {
                <button
                   onClick={step === 'import' ? handleImportSubmit : handleSetPassword}
                   disabled={loading || password.length < 8}
-                  className="w-full bg-brand-cyan text-brand-midnight py-5 text-label-caps font-bold shadow-[0_0_30px_rgba(10,217,220,0.1)] disabled:opacity-20 flex items-center justify-center gap-3"
+                  className="w-full bg-brand-cyan text-brand-midnight py-5 text-label-caps font-bold shadow-[0_0_30px_rgba(10,217,220,0.1)] disabled:cursor-not-allowed disabled:bg-surface disabled:text-muted disabled:border disabled:border-ui disabled:shadow-none flex items-center justify-center gap-3"
                >
                   {loading ? 'Creating...' : 'Create Wallet'} <ArrowRight className="w-4 h-4" />
                </button>
                <div className="flex justify-between items-center px-1">
                   <span className="text-[8px] font-mono text-muted uppercase tracking-widest">All data stored locally</span>
-                  <span className="text-[8px] font-mono text-muted uppercase tracking-widest">v1.0.0</span>
+                  <span className="text-[8px] font-mono text-muted uppercase tracking-widest">v1.0.1</span>
                </div>
             </div>
           </motion.div>

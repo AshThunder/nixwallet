@@ -65,7 +65,7 @@ The background service worker (`background.ts`) and the UI (`App.tsx`) communica
 
 1. On successful unlock, `App.tsx` sends `VAULT_UNLOCKED` to background
 2. Background starts a 30-second polling interval comparing `Date.now() - lastActivity` against `autoLockTimeout`
-3. Every incoming message resets `lastActivity`
+3. Incoming runtime messages (`RPC_REQUEST`, `KEEP_ALIVE`, lock state, etc.) reset `lastActivity`; the UI also sends `KEEP_ALIVE` on common user events (click, keydown, scroll, input) so the timer reflects real interaction with the side panel
 4. When the threshold is exceeded, background broadcasts `VAULT_LOCKED`
 5. `App.tsx` listens for `VAULT_LOCKED`, clears memory, and transitions to the unlock screen
 
@@ -88,6 +88,19 @@ The FHERC20 wrapper supports `claimUnshieldedBatch` for claiming multiple pendin
 ### 8. State Isolation
 Each screen manages its own state. There is no global store. Cross-screen data is passed via props from `App.tsx`. This keeps the architecture flat and easy to reason about.
 
+### 9. Smart Contracts in the Main Repository
+Solidity sources and Hardhat configuration live under **`hardhat/`** in the same Git repo as the extension (not a separate submodule). Deploy artifacts and `node_modules` remain gitignored; see `hardhat/README.md` for compile and deploy commands.
+
+### 10. Token Discovery (Manage Tokens)
+On **Sepolia**, **ManageTokens** suggests ERC-20s the user may hold but has not saved yet:
+
+- Merges contract addresses from **Etherscan** and **Blockscout** token-transfer indexers (optional `VITE_ETHERSCAN_API_KEY` at build time for Etherscan reliability)
+- Falls back to a bounded **`eth_getLogs`** scan for recent inbound `Transfer` events when both indexers fail
+- Always **balance-probes** a small curated list of common Sepolia ERC-20s
+- **Does not** re-run full discovery on every “Add”; it updates the list locally after add and only rescans after **remove** or wallet/network change
+
+The screen uses **tabs** (In your wallet vs Saved), **filter** (name / symbol / address), and **pagination** to keep long lists usable.
+
 ## Data Flow
 
 ```
@@ -98,10 +111,12 @@ Screen Component (e.g. Send.tsx)
     │
     ├──▶ lib/wallet.ts    ──▶ ethers.js  ──▶ Sepolia RPC
     ├──▶ lib/cofhe.ts     ──▶ coFHE SDK  ──▶ FHE Encryption / Threshold Decrypt
-    ├──▶ lib/contracts.ts  ──▶ Registry   ──▶ Wrapper lookup / deploy / interact
-    ├──▶ lib/vault.ts     ──▶ chrome.storage.local (AES-GCM encrypted)
-    ├──▶ lib/contacts.ts  ──▶ chrome.storage.local (unified address book)
-    └──▶ lib/activity.ts  ──▶ chrome.storage.local (transaction history)
+    ├──▶ lib/contracts.ts    ──▶ Registry   ──▶ Wrapper lookup / deploy / interact
+    ├──▶ lib/tokens.ts       ──▶ chrome.storage.local (custom token list)
+    ├──▶ lib/detectTokens.ts ──▶ RPC + explorers ──▶ Suggested tokens (Sepolia)
+    ├──▶ lib/vault.ts        ──▶ chrome.storage.local (AES-GCM encrypted)
+    ├──▶ lib/contacts.ts     ──▶ chrome.storage.local (unified address book)
+    └──▶ lib/activity.ts     ──▶ chrome.storage.local (transaction history)
 ```
 
 ## Directory Map
@@ -109,9 +124,9 @@ Screen Component (e.g. Send.tsx)
 | Directory | Purpose |
 |-----------|---------|
 | `extension/src/screens/` | UI screens — one file per screen |
-| `extension/src/lib/` | Business logic — wallet, vault, contacts, activity, contracts, cofhe |
-| `extension/src/components/` | Shared UI components (ThemeToggle, etc.) |
+| `extension/src/lib/` | Business logic — wallet, vault, contacts, activity, contracts, cofhe, tokens, detectTokens |
+| `extension/src/components/` | Shared UI (e.g. `AccountPicker`) |
 | `extension/src/background.ts` | Service worker — auto-lock timer, RPC proxy |
-| `extension/public/` | Extension manifest and static assets |
+| `extension/manifest.json` | Extension manifest (side panel, permissions, content scripts) |
 | `hardhat/contracts/` | Solidity contracts (Registry + Wrapper) |
 | `hardhat/deploy/` | Hardhat deployment scripts |

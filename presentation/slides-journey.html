@@ -170,6 +170,45 @@
             max-width: min(48vw, 22rem);
             line-height: 1.35;
         }
+
+        .slide-nav {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 101;
+            width: clamp(2.75rem, 5vw, 3.25rem);
+            height: clamp(2.75rem, 5vw, 3.25rem);
+            border-radius: 50%;
+            border: 1px solid var(--border);
+            background: rgba(15, 23, 42, 0.92);
+            color: var(--cyan);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s, border-color 0.2s, opacity 0.2s, box-shadow 0.2s;
+            padding: 0;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.35);
+        }
+        .slide-nav:hover:not(:disabled) {
+            border-color: var(--cyan);
+            background: var(--cyan-dim);
+            box-shadow: 0 0 20px var(--cyan-glow);
+        }
+        .slide-nav:focus-visible {
+            outline: 2px solid var(--cyan);
+            outline-offset: 3px;
+        }
+        .slide-nav:disabled {
+            opacity: 0.22;
+            cursor: not-allowed;
+        }
+        .slide-nav-prev { left: clamp(0.5rem, 2vw, 1.25rem); }
+        .slide-nav-next { right: clamp(0.5rem, 2vw, 1.25rem); }
+        .slide-nav svg {
+            width: 1.4rem;
+            height: 1.4rem;
+        }
     </style>
 </head>
 <body>
@@ -323,7 +362,14 @@
 
 <div id="progress"></div>
 <div id="counter" class="mono"></div>
-<div id="nav-hint" class="mono">← → or click · left back · right forward</div>
+<div id="nav-hint" class="mono">← → · click sides · or use arrows</div>
+
+<button type="button" id="nav-prev" class="slide-nav slide-nav-prev" aria-label="Previous slide">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+</button>
+<button type="button" id="nav-next" class="slide-nav slide-nav-next" aria-label="Next slide">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+</button>
 
 <script>
     const slides = document.querySelectorAll('.slide');
@@ -335,6 +381,13 @@
         document.getElementById('counter').textContent = (current + 1) + ' / ' + total;
     }
 
+    function updateNavButtons() {
+        const prevBtn = document.getElementById('nav-prev');
+        const nextBtn = document.getElementById('nav-next');
+        if (prevBtn) prevBtn.disabled = current <= 0;
+        if (nextBtn) nextBtn.disabled = current >= total - 1;
+    }
+
     function goTo(n) {
         if (n < 0 || n >= total || n === current) return;
         const prev = current;
@@ -344,9 +397,14 @@
         slides[current].classList.add('active');
         setTimeout(() => slides[prev].classList.remove('exiting'), 500);
         syncChrome();
+        updateNavButtons();
     }
 
     syncChrome();
+    updateNavButtons();
+
+    document.getElementById('nav-prev').addEventListener('click', (e) => { e.stopPropagation(); goTo(current - 1); });
+    document.getElementById('nav-next').addEventListener('click', (e) => { e.stopPropagation(); goTo(current + 1); });
 
     document.addEventListener('keydown', (e) => {
         if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter') { e.preventDefault(); goTo(current + 1); }
@@ -356,7 +414,7 @@
     });
 
     document.addEventListener('click', (e) => {
-        if (e.target.closest('a')) return;
+        if (e.target.closest('a') || e.target.closest('.slide-nav')) return;
         if (e.clientX < window.innerWidth / 2) goTo(current - 1);
         else goTo(current + 1);
     });

@@ -8,7 +8,11 @@ Built for the **Fhenix** stack and **Fully Homomorphic Encryption (FHE)** — sh
 
 **Demo video:** [YouTube — NixWallet walkthrough](https://youtu.be/QyfxLNSE_MQ)
 
-**Now live on Chrome Web Store:** [Install NixWallet](https://chromewebstore.google.com/detail/nixwallet/nkkaidapildbkjmnfeieepmejghgmipi)
+## 🚀 Now Live on Chrome Web Store
+
+> **Install in one click:** [Add NixWallet to Chrome](https://chromewebstore.google.com/detail/nixwallet/nkkaidapildbkjmnfeieepmejghgmipi)
+
+[![Install NixWallet on Chrome Web Store](https://img.shields.io/badge/Chrome%20Web%20Store-Install%20NixWallet-4285F4?logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/nixwallet/nkkaidapildbkjmnfeieepmejghgmipi)
 
 ---
 

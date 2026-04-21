@@ -8,6 +8,8 @@ Built for the **Fhenix** stack and **Fully Homomorphic Encryption (FHE)** — sh
 
 **Demo video:** [YouTube — NixWallet walkthrough](https://youtu.be/QyfxLNSE_MQ)
 
+**Now live on Chrome Web Store:** [Install NixWallet](https://chromewebstore.google.com/detail/nixwallet/nkkaidapildbkjmnfeieepmejghgmipi)
+
 ---
 
 ## Why we built this
@@ -116,6 +118,14 @@ Think in **three pillars**: **wrap (shield)**, **confidential use**, **unwrap (u
 - npm
 - Chrome 114+ (for side panel support)
 
+### Install from Chrome Web Store (recommended for users)
+
+NixWallet is now live and can be installed directly from the Chrome Web Store:
+
+- [Add NixWallet to Chrome](https://chromewebstore.google.com/detail/nixwallet/nkkaidapildbkjmnfeieepmejghgmipi)
+
+### Local developer installation
+
 ### Installation
 
 ```bash
@@ -193,6 +203,7 @@ npx hardhat deploy --network sepolia --tags FHERC20
 ## Links
 
 - **GitHub**: [github.com/AshThunder/nixwallet](https://github.com/AshThunder/nixwallet)
+- **Chrome Web Store**: [NixWallet extension](https://chromewebstore.google.com/detail/nixwallet/nkkaidapildbkjmnfeieepmejghgmipi)
 - **Fhenix**: [fhenix.io](https://fhenix.io)
 - **coFHE Docs**: [cofhe-docs.fhenix.zone](https://cofhe-docs.fhenix.zone)
 - **Creator**: [@ChrisGold__](https://x.com/ChrisGold__)

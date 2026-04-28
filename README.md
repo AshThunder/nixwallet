@@ -108,7 +108,7 @@ Think in **three pillars**: **wrap (shield)**, **confidential use**, **unwrap (u
 | Styling | Tailwind CSS v4 |
 | Build | Vite, CRXJS |
 | Animations | Framer Motion |
-| Crypto | Fhenix coFHE SDK, ethers.js v6 |
+| Crypto | Fhenix coFHE SDK (`@cofhe/sdk` ^0.5.1), ethers.js v6 |
 | Storage | Chrome local/session storage (AES-GCM encrypted vault) |
 | Smart Contracts | Solidity 0.8.25, Hardhat, Fhenix Confidential Contracts |
 

@@ -51,3 +51,4 @@ convert_icons.py
 
 # Store / release bundles (keep local or attach to GitHub Releases)
 *.zip
+extension/STORE_LISTING.md

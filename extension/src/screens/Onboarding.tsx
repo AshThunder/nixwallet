@@ -209,7 +209,7 @@ export default function Onboarding({ onComplete }: Props) {
                </div>
                <div className="bg-surface border border-ui p-4 flex justify-between items-center">
                   <span className="text-[8px] font-mono text-muted uppercase tracking-widest">Wallet Version</span>
-                  <span className="text-[9px] font-bold text-sub uppercase tracking-[0.1em]">v1.0.1</span>
+                  <span className="text-[9px] font-bold text-sub uppercase tracking-[0.1em]">v1.0.2</span>
                </div>
             </div>
 
@@ -337,7 +337,7 @@ export default function Onboarding({ onComplete }: Props) {
                </button>
                <div className="flex justify-between items-center px-1">
                   <span className="text-[8px] font-mono text-muted uppercase tracking-widest">All data stored locally</span>
-                  <span className="text-[8px] font-mono text-muted uppercase tracking-widest">v1.0.1</span>
+                  <span className="text-[8px] font-mono text-muted uppercase tracking-widest">v1.0.2</span>
                </div>
             </div>
           </motion.div>

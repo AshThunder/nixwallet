@@ -395,7 +395,7 @@ export default function SettingsScreen({ mnemonic, onBack, onReset, onNetworkCha
       </div>
       <div>
         <h2 className="text-xl font-brand font-bold uppercase tracking-tighter text-main">NixWallet</h2>
-        <p className="text-xs text-sub font-mono tracking-widest mt-1">v1.0.1</p>
+        <p className="text-xs text-sub font-mono tracking-widest mt-1">v1.0.2</p>
       </div>
       <p className="text-sm text-sub leading-relaxed">
         The premier confidential wallet powered by the Fhenix coFHE network. Built for privacy, speed, and seamless access to the decentralized web.

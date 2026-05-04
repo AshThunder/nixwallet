@@ -221,7 +221,7 @@
     <div class="slide active" data-slide="0">
         <div class="slide-label mono">Start · What is this?</div>
         <h1>NIX<span>WALLET</span></h1>
-        <p style="margin-top:1.25rem;"><strong>NixWallet</strong> is a <strong>self-custodial</strong> Chrome extension wallet for the <strong>Fhenix</strong> stack: it wraps everyday <strong>ERC-20s</strong> into <strong>FHERC20</strong> confidential assets, sends <strong>encrypted amounts</strong> with <strong>coFHE</strong>, and keeps <strong>shield → use → unwrap</strong> one click away in the <strong>side panel</strong>—with public ETH/ERC-20 send and receive and an on-chain activity view (live on <strong>Ethereum Sepolia</strong> today).</p>
+        <p style="margin-top:1.25rem;"><strong>NixWallet</strong> is a <strong>self-custodial</strong> Chrome extension wallet for the <strong>Fhenix</strong> stack: it wraps everyday <strong>ERC-20s</strong> into <strong>FHERC20</strong> confidential assets, sends <strong>encrypted amounts</strong> with <strong>coFHE</strong>, and keeps <strong>shield → use → unwrap</strong> one click away in the <strong>side panel</strong>—with injected dApp approvals, WalletConnect wallet mode, and activity tracking across wallet and dApp transactions.</p>
         <p style="margin-top:1rem;">This deck walks you through the product <strong>from first install to everyday use</strong>. One slide per step.</p>
     </div>
 
@@ -229,7 +229,7 @@
         <div class="slide-label mono">Step 1 · Add to Chrome</div>
         <h2>Add the extension <span style="color:var(--cyan)">in Chrome</span></h2>
         <p><strong>While you build or test:</strong> open <code class="mono">chrome://extensions</code>, turn on <strong>Developer mode</strong>, click <strong>Load unpacked</strong>, and pick the <strong>dist</strong> folder from your build.</p>
-        <p style="margin-top:1rem;"><strong>When it is on the store:</strong> install from the Chrome Web Store like any other extension.</p>
+        <p style="margin-top:1rem;"><strong>For users:</strong> install from the Chrome Web Store like any other extension.</p>
         <ul class="step-list">
             <li><strong>Tip:</strong> after a code change, run <strong>build</strong> again, then refresh the extension on the extensions page.</li>
         </ul>
@@ -262,7 +262,7 @@
         <p>This is your <strong>main screen</strong> after you unlock. You see <strong>balances</strong>, quick actions, and tabs at the bottom.</p>
         <ul class="step-list">
             <li><strong>Tokens</strong> — coins and tokens you care about.</li>
-            <li><strong>Activity</strong> — a list of past moves (we cover this later).</li>
+            <li><strong>Activity</strong> — wallet-native, injected dApp, and WalletConnect transaction history.</li>
             <li><strong>Discover</strong> — links to learn more about the ecosystem.</li>
         </ul>
     </div>
@@ -293,7 +293,7 @@
         <h2><span style="color:var(--cyan)">Receive</span> funds</h2>
         <p>Open <strong>Receive</strong>. You see your <strong>address</strong> and a <strong>QR code</strong>. Share the address or let someone scan the code.</p>
         <ul class="step-list">
-            <li>Use a <strong>testnet faucet</strong> to get free test ETH on <strong>Sepolia</strong> if you need gas.</li>
+            <li>Use a <strong>testnet faucet</strong> to get free test ETH on the active supported network if you need gas.</li>
             <li>Only send <strong>testnet</strong> assets to this address when you are on testnet.</li>
         </ul>
     </div>
@@ -303,7 +303,7 @@
         <h2><span style="color:var(--cyan)">Manage</span> tokens</h2>
         <p>Use <strong>Manage tokens</strong> to add tokens you use often. You can browse <strong>suggested</strong> tokens or add by <strong>contract address</strong>.</p>
         <ul class="step-list">
-            <li><strong>In your wallet</strong> — ideas from the chain or lists (on Sepolia).</li>
+            <li><strong>In your wallet</strong> — ideas from the chain or lists where discovery is available.</li>
             <li><strong>Saved</strong> — tokens you chose to keep in the list.</li>
             <li>Use <strong>search</strong> when the list is long.</li>
         </ul>
@@ -312,7 +312,7 @@
     <div class="slide" data-slide="9">
         <div class="slide-label mono">Step 9 · Activity</div>
         <h2><span style="color:var(--cyan)">Activity</span> tab</h2>
-        <p>Open the <strong>Activity</strong> tab on the home screen. You see a <strong>history</strong> of sends, wraps, and other actions.</p>
+        <p>Open the <strong>Activity</strong> tab on the home screen. You see a <strong>history</strong> of sends, wraps, dApp submissions, WalletConnect submissions, and other actions.</p>
         <ul class="step-list">
             <li>Tap a <strong>link</strong> to open a <strong>block explorer</strong> and see the transaction on the web.</li>
             <li>Helps you <strong>prove</strong> what happened during a demo or debug.</li>
@@ -326,23 +326,28 @@
         <ul class="step-list">
             <li><strong>Security</strong> — auto-lock time, clear history, show seed (needs password), delete wallet.</li>
             <li><strong>Address book</strong> — save names next to addresses for faster sends.</li>
-            <li><strong>Networks</strong> — today the app uses <strong>Sepolia</strong>; more testnets can come later.</li>
+            <li><strong>Networks</strong> — switch between <strong>Ethereum Sepolia</strong>, <strong>Base Sepolia</strong>, and <strong>Arbitrum Sepolia</strong>.</li>
+            <li><strong>Connected DApps</strong> — review origins, revoke access, and manage WalletConnect sessions.</li>
             <li><strong>About</strong> — version and links.</li>
         </ul>
     </div>
 
     <div class="slide" data-slide="11">
-        <div class="slide-label mono">Extra · Discover</div>
-        <h2><span style="color:var(--cyan)">Discover</span> tab</h2>
-        <p>From the home screen, open <strong>Discover</strong>. It lists <strong>helpful links</strong> — docs, the chain, community projects.</p>
-        <p style="margin-top:1rem;">Good place to send someone <strong>after</strong> a demo if they want to read more.</p>
+        <div class="slide-label mono">Extra · DApp approvals</div>
+        <h2>DApp requests stay in <span style="color:var(--cyan)">NixWallet</span></h2>
+        <p>Open the companion dApp, click <strong>Connect NixWallet</strong>, and show that the trusted request appears in NixWallet — not inside the dApp.</p>
+        <ul class="step-list">
+            <li><strong>Unlock first</strong> — approval is blocked while locked.</li>
+            <li><strong>Generate payloads</strong> — confidential transfers generate read-only encrypted values before send.</li>
+            <li><strong>Side panel</strong> — NixWallet attempts to open automatically for sensitive requests.</li>
+        </ul>
     </div>
 
     <div class="slide" data-slide="12">
         <div class="slide-label mono">End</div>
         <h2>You are <span style="color:var(--cyan)">ready</span></h2>
-        <p>That is the full path: <strong>install → open → set up → home → wrap → send → receive → tokens → activity → settings</strong>.</p>
-        <p style="margin-top:1rem;">Try the app on <strong>Sepolia</strong>, open the <strong>README</strong> on GitHub for setup, or continue to the <strong>next slide</strong> for links and a thank-you.</p>
+        <p>That is the full path: <strong>install → open → set up → home → wrap → send → receive → tokens → activity → settings → dApp approvals</strong>.</p>
+        <p style="margin-top:1rem;">Try the app on the supported testnets, open the <strong>README</strong> on GitHub for setup, or continue to the <strong>next slide</strong> for links and a thank-you.</p>
     </div>
 
     <div class="slide" data-slide="13">

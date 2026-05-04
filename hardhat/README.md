@@ -17,7 +17,11 @@ A factory contract that auto-deploys and indexes one confidential FHERC20 wrappe
 - `getWrapper(address underlying)` — Read-only lookup (returns `address(0)` if no wrapper)
 - `wrapperCount()` — Total number of deployed wrappers
 
-**Deployed on Sepolia:** `0xEE098B005e1B979Ca32ac427c367C343879e502C`
+**Deployed registries:**
+
+- Ethereum Sepolia: `0xEE098B005e1B979Ca32ac427c367C343879e502C`
+- Base Sepolia: `0xfD4223809FE333FC23468F76bB38BE4169853761`
+- Arbitrum Sepolia: `0xe572ED5b27b44641Da441cE479643B30CF200E9c`
 
 ### FHERC20UnderlyingWrapper
 
@@ -50,12 +54,14 @@ cp .env.example .env    # Add DEPLOYER_PRIVATE_KEY
 ```bash
 npx hardhat compile                          # Compile contracts
 npx hardhat deploy --network sepolia --tags FHERC20   # Deploy registry
+npx hardhat deploy --network baseSepolia --tags FHERC20
+npx hardhat deploy --network arbitrumSepolia --tags FHERC20
 npx hardhat test                             # Run tests
 ```
 
 ## Configuration
 
-See `hardhat.config.ts` for network configuration. The project targets Ethereum Sepolia for testnet deployment.
+See `hardhat.config.ts` for network configuration. The project targets Ethereum Sepolia, Base Sepolia, and Arbitrum Sepolia for testnet deployment.
 
 ## Dependencies
 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, ArrowUpRight, Loader2, CheckCircle, AlertCircle, Lock, Shield, ChevronDown, Check, Eye, ExternalLink } from 'lucide-react';
-import { getWrapperAddress, REGISTRY_ADDRESS } from '../lib/contracts';
+import { getWrapperAddress, getRegistryAddress } from '../lib/contracts';
 import { initCofheClient, encryptAmount64, decryptForView, FheTypes } from '../lib/cofhe';
 import { addActivity } from '../lib/activity';
 import { getSigner, shortenAddress, getProvider, getActiveNetwork } from '../lib/wallet';
@@ -36,7 +36,7 @@ export default function SendScreen({ address: _addr, privateKey, initialToken, o
   const tokenSymbol = initialToken?.symbol || 'ETH';
   const tokenAddress = initialToken?.address || ethers.ZeroAddress;
   const isNativeETH = tokenAddress === ethers.ZeroAddress;
-  const registryConfigured = REGISTRY_ADDRESS !== ethers.ZeroAddress;
+  const registryConfigured = getRegistryAddress() !== ethers.ZeroAddress;
 
   useEffect(() => {
     if (isNativeETH) setSendMode('public');
@@ -144,12 +144,20 @@ export default function SendScreen({ address: _addr, privateKey, initialToken, o
         await addActivity({
           id: tx.hash, type: 'send', amount: `${amount} ${tokenSymbol}`,
           status: 'pending', networkId: network.id, address: _addr, hash: tx.hash, isConfidential: false, recipient,
+          tokenSymbol,
+          tokenAddress,
+          chainId: network.chainId,
+          txStage: 'submitted',
         });
 
         await tx.wait();
         await addActivity({
           id: tx.hash, type: 'send', amount: `${amount} ${tokenSymbol}`,
           status: 'success', networkId: network.id, address: _addr, hash: tx.hash, isConfidential: false, recipient,
+          tokenSymbol,
+          tokenAddress,
+          chainId: network.chainId,
+          txStage: 'confirmed',
         });
       } else {
         if (!hasWrapper) throw new Error('No wrapper deployed for this token yet — shield some first');
@@ -181,12 +189,20 @@ export default function SendScreen({ address: _addr, privateKey, initialToken, o
         await addActivity({
           id: tx.hash, type: 'confidential-transfer', amount: `${amount} c${tokenSymbol}`,
           status: 'pending', networkId: network.id, address: _addr, hash: tx.hash, isConfidential: true, recipient,
+          tokenSymbol: `c${tokenSymbol}`,
+          tokenAddress,
+          chainId: network.chainId,
+          txStage: 'submitted',
         });
 
         await tx.wait();
         await addActivity({
           id: tx.hash, type: 'confidential-transfer', amount: `${amount} c${tokenSymbol}`,
           status: 'success', networkId: network.id, address: _addr, hash: tx.hash, isConfidential: true, recipient,
+          tokenSymbol: `c${tokenSymbol}`,
+          tokenAddress,
+          chainId: network.chainId,
+          txStage: 'confirmed',
         });
       }
 
@@ -214,6 +230,10 @@ export default function SendScreen({ address: _addr, privateKey, initialToken, o
       </header>
 
       <main className="flex-1 w-full px-6 pt-6 relative z-10 overflow-y-auto no-scrollbar">
+        <div className="mb-4 p-3 bg-surface border border-ui text-[10px] uppercase tracking-widest text-sub font-bold">
+          Active Network: {getActiveNetwork().name} ({getActiveNetwork().chainId}) — switch in Settings if needed.
+        </div>
+
         {/* Public / Private Toggle (tokens only — no native ETH wrapping) */}
         {!isNativeETH && (
           <div className="flex bg-surface p-1 mb-6">

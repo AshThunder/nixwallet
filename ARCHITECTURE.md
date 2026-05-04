@@ -18,8 +18,8 @@ NixWallet is a Chrome extension wallet designed around a **unidirectional data f
 │        │  VAULT_UNLOCKED                    │            │
 │  ┌──────────────┐                   ┌──────────────┐    │
 │  │ background.ts │                  │ chrome.storage│    │
-│  │ (Auto-Lock    │                  │ (local +      │    │
-│  │  + RPC Proxy) │                  │  session)     │    │
+│  │ (Auto-Lock,   │                  │ (local +      │    │
+│  │  RPC, dApps)  │                  │  session)     │    │
 │  └──────────────┘                   └──────────────┘    │
 │                                            │             │
 │                                     ┌──────────────┐    │
@@ -31,7 +31,7 @@ NixWallet is a Chrome extension wallet designed around a **unidirectional data f
           │
           ▼
 ┌──────────────────────────────────────┐
-│         Ethereum Sepolia             │
+│ Sepolia + Base/Arbitrum Sepolia      │
 │  ┌──────────────────────────────┐   │
 │  │  FHERC20WrapperRegistry      │   │
 │  │  (Factory: auto-deploy       │   │
@@ -60,7 +60,7 @@ All wallet logic runs locally in the browser. Private keys, seed phrases, and pr
 ### 3. AES-GCM Encrypted Vault
 The seed phrase and imported keys are encrypted using AES-GCM with a password-derived key (PBKDF2, random salt). The encrypted blob lives in `chrome.storage.local`. On unlock, it's decrypted into memory; on lock, sensitive data is wiped.
 
-### 4. Auto-Lock Flow
+### 4. Auto-Lock and Approval Lock Flow
 The background service worker (`background.ts`) and the UI (`App.tsx`) communicate via Chrome messaging:
 
 1. On successful unlock, `App.tsx` sends `VAULT_UNLOCKED` to background
@@ -68,6 +68,8 @@ The background service worker (`background.ts`) and the UI (`App.tsx`) communica
 3. Incoming runtime messages (`RPC_REQUEST`, `KEEP_ALIVE`, lock state, etc.) reset `lastActivity`; the UI also sends `KEEP_ALIVE` on common user events (click, keydown, scroll, input) so the timer reflects real interaction with the side panel
 4. When the threshold is exceeded, background broadcasts `VAULT_LOCKED`
 5. `App.tsx` listens for `VAULT_LOCKED`, clears memory, and transitions to the unlock screen
+
+External dApp requests can still be displayed while locked, but approval is blocked in both the overlay and the background `APPROVE_PROVIDER_REQUEST` handler until unlock succeeds.
 
 ### 5. FHERC20 Wrapper Registry
 Instead of hardcoding wrapper addresses per token, the extension uses an on-chain `FHERC20WrapperRegistry` factory contract:
@@ -101,6 +103,18 @@ On **Sepolia**, **ManageTokens** suggests ERC-20s the user may hold but has not 
 
 The screen uses **tabs** (In your wallet vs Saved), **filter** (name / symbol / address), and **pagination** to keep long lists usable.
 
+### 11. Injected DApp Provider and Approval Queue
+
+NixWallet injects a provider with EIP-1193 and EIP-6963 support. `content.ts` injects `injected.js`, the provider announces itself with `eip6963:announceProvider`, and dApp `provider.request(...)` calls are forwarded to `background.ts`.
+
+Sensitive methods are queued as pending provider requests and shown in `DappRequestApprovalOverlay`. The background attempts to open the Chrome side panel immediately when a sensitive RPC request arrives. Only after explicit approval does the background connect accounts, sign messages, sign typed data, send transactions, or switch network.
+
+### 12. Activity Sources
+
+`lib/activity.ts` is the single local history store. It records wallet-native send/wrap/unwrap/confidential flows, injected dApp transaction submissions, and WalletConnect transaction submissions.
+
+External transaction rows currently store the submitting account, active network, recipient/contract, transaction hash, chain ID, and source stage. Human token amount decoding for external ERC-20 calls is planned.
+
 ## Data Flow
 
 ```
@@ -116,7 +130,9 @@ Screen Component (e.g. Send.tsx)
     ├──▶ lib/detectTokens.ts ──▶ RPC + explorers ──▶ Suggested tokens (Sepolia)
     ├──▶ lib/vault.ts        ──▶ chrome.storage.local (AES-GCM encrypted)
     ├──▶ lib/contacts.ts     ──▶ chrome.storage.local (unified address book)
-    └──▶ lib/activity.ts     ──▶ chrome.storage.local (transaction history)
+    ├──▶ lib/activity.ts     ──▶ chrome.storage.local (transaction history)
+    ├──▶ lib/dappPermissions.ts ──▶ chrome.storage.local (connected origins)
+    └──▶ lib/walletConnectWallet.ts ──▶ WalletConnect v2 wallet mode
 ```
 
 ## Directory Map
@@ -124,9 +140,10 @@ Screen Component (e.g. Send.tsx)
 | Directory | Purpose |
 |-----------|---------|
 | `extension/src/screens/` | UI screens — one file per screen |
-| `extension/src/lib/` | Business logic — wallet, vault, contacts, activity, contracts, cofhe, tokens, detectTokens |
-| `extension/src/components/` | Shared UI (e.g. `AccountPicker`) |
-| `extension/src/background.ts` | Service worker — auto-lock timer, RPC proxy |
+| `extension/src/lib/` | Business logic — wallet, vault, contacts, activity, contracts, cofhe, tokens, detectTokens, dApp permissions, WalletConnect |
+| `extension/src/components/` | Shared UI (e.g. `AccountPicker`, dApp approval overlay) |
+| `extension/src/background.ts` | Service worker — auto-lock timer, RPC proxy, dApp approvals |
+| `dapp/src/` | Companion dApp for injected provider and FHERC20 flow testing |
 | `extension/manifest.json` | Extension manifest (side panel, permissions, content scripts) |
 | `hardhat/contracts/` | Solidity contracts (Registry + Wrapper) |
 | `hardhat/deploy/` | Hardhat deployment scripts |

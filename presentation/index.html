@@ -474,7 +474,7 @@
     <div class="hero-glow"></div>
     <div class="hero-content">
         <h1>NIX<span>WALLET</span></h1>
-        <p class="hero-sub">The <strong>confidential</strong> Chrome extension wallet for <strong>Fhenix</strong>: <strong>FHERC20</strong> and <strong>coFHE</strong> in Chrome’s side panel—secure, self-custodial asset flows currently liveon <strong>Ethereum Sepolia</strong>.</p>
+        <p class="hero-sub">The <strong>confidential</strong> Chrome extension wallet for <strong>Fhenix</strong>: <strong>FHERC20</strong> and <strong>coFHE</strong> in Chrome’s side panel, with injected dApp approvals, WalletConnect wallet mode, and flows live across <strong>Ethereum Sepolia</strong>, <strong>Base Sepolia</strong>, and <strong>Arbitrum Sepolia</strong>.</p>
         <div class="hero-cta">
             <a href="https://github.com/AshThunder/nixwallet" target="_blank" class="btn-primary">View on GitHub</a>
             <a href="slides-journey.html" class="btn-ghost">Walkthrough slides</a>
@@ -491,7 +491,7 @@
         <div class="reveal">
             <div class="section-label mono">Core Capabilities</div>
             <h2 class="section-title">Privacy Without<br>Compromise</h2>
-            <p class="section-desc">NixWallet wraps the full power of Fhenix's Fully Homomorphic Encryption into a seamless Chrome extension—giving you encrypted token management, multi-network support, and a suite of privacy tools.</p>
+            <p class="section-desc">NixWallet wraps the full power of Fhenix's Fully Homomorphic Encryption into a seamless Chrome extension—giving you encrypted token management, multi-network support, dApp approvals, and local-first activity history.</p>
         </div>
 
         <div class="features-grid">
@@ -514,8 +514,8 @@
                     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
                 </div>
                 <h3>Multi-Network Support</h3>
-                <p>Currently live on Ethereum Sepolia. Multi-network support for Base testnet and Arbitrum testnet (alongside Sepolia) is coming soon.</p>
-                <span class="feature-badge mono">Coming Soon</span>
+                <p>Now live across Ethereum Sepolia, Base Sepolia, and Arbitrum Sepolia, with network-aware RPC and chain switching inside the wallet.</p>
+                <span class="feature-badge mono">Wave 3 Live</span>
             </div>
             <div class="feature-card reveal">
                 <div class="feature-icon">
@@ -529,16 +529,32 @@
                     <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
                 </div>
                 <h3>In-Wallet Swaps</h3>
-                <p>Swap tokens directly inside NixWallet through an integrated Fhenix DEX router. No external dApps required.</p>
-                <span class="feature-badge mono">Coming Soon</span>
+                <p>Wave 3 adds a swap MVP scaffold with token selectors, slippage controls, and quote plumbing, ready for router execution integration.</p>
+                <span class="feature-badge mono">Wave 3 MVP</span>
             </div>
             <div class="feature-card reveal">
                 <div class="feature-icon">
                     <svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
                 </div>
                 <h3>DApp Connection Manager</h3>
-                <p>Review every website currently connected to your wallet and revoke permissions with a single click from the Settings panel.</p>
-                <span class="feature-badge mono">Coming Soon</span>
+                <p>Review connected websites, revoke permissions, and approve injected dApp requests directly inside NixWallet. Approval is blocked until the wallet is unlocked.</p>
+                <span class="feature-badge mono">Wave 3 Live</span>
+            </div>
+            <div class="feature-card reveal">
+                <div class="feature-icon">
+                    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
+                </div>
+                <h3>Companion DApp</h3>
+                <p>External test dApp for USDT/USDC public transfers, approve + wrap, confidential balance reveal, encrypted transfers, unwrap, and claim flows.</p>
+                <span class="feature-badge mono">Testing Surface</span>
+            </div>
+            <div class="feature-card reveal">
+                <div class="feature-icon">
+                    <svg viewBox="0 0 24 24"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 15l3-3 3 2 5-6"/></svg>
+                </div>
+                <h3>External Activity</h3>
+                <p>Activity history now records wallet-native transactions plus injected dApp and WalletConnect transaction submissions.</p>
+                <span class="feature-badge mono">Wave 3 Live</span>
             </div>
         </div>
     </div>
@@ -561,7 +577,8 @@
             <div class="tech-pill"><span class="tech-dot"></span> Framer Motion</div>
             <div class="tech-pill"><span class="tech-dot"></span> Fhenix coFHE SDK</div>
             <div class="tech-pill"><span class="tech-dot"></span> ethers.js v6</div>
-            <div class="tech-pill"><span class="tech-dot"></span> fhenixjs</div>
+            <div class="tech-pill"><span class="tech-dot"></span> EIP-1193 / EIP-6963</div>
+            <div class="tech-pill"><span class="tech-dot"></span> WalletConnect v2</div>
         </div>
     </div>
 </section>
@@ -580,8 +597,8 @@
                 <div class="label">Screens</div>
             </div>
             <div class="arch-cell">
-                <div class="number">1</div>
-                <div class="label">Network live · more soon</div>
+                <div class="number">3</div>
+                <div class="label">Supported testnets</div>
             </div>
             <div class="arch-cell">
                 <div class="number">FHE</div>

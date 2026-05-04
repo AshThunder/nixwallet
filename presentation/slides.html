@@ -271,7 +271,7 @@
     <div class="slide" data-slide="1">
         <div class="slide-label mono">Why we built this</div>
         <h2>Privacy Starts At The <span style="color:var(--cyan)">Wallet</span></h2>
-        <p>Fhenix makes it possible to run wallet logic on <strong>encrypted balances</strong>, but someone still had to ship the <strong>browser experience</strong>: onboarding, keys, wrap/unwrap, and dApp connectivity.</p>
+        <p>Fhenix makes it possible to run wallet logic on <strong>encrypted balances</strong>, but someone still had to ship the <strong>browser experience</strong>: onboarding, keys, wrap/unwrap, dApp approvals, and WalletConnect wallet mode.</p>
         <ul class="core-list">
             <li><strong>Gap</strong> — Standard wallets only move plaintext ERC-20s; every amount is a billboard on a public chain.</li>
             <li><strong>Goal</strong> — One Chrome flow that feels like a normal EVM wallet while speaking <strong>FHERC20</strong> and <strong>coFHE</strong>.</li>
@@ -328,11 +328,11 @@
     <div class="slide" data-slide="6">
         <div class="slide-label mono">Core part · Extension</div>
         <h2>Chrome <span style="color:var(--cyan)">Extension</span></h2>
-        <p>Built for <strong>side panel</strong> constraints: fast UI, encrypted vault at rest, background worker for auto-lock and RPC proxy.</p>
+        <p>Built for <strong>side panel</strong> constraints: fast UI, encrypted vault at rest, background worker for auto-lock, RPC proxy, permissions, and approval queue.</p>
         <ul class="core-list">
             <li><strong>Vault</strong> — AES-GCM + PBKDF2; keys in memory only while unlocked.</li>
-            <li><strong>dApps</strong> — EIP-1193 <code class="mono" style="color:var(--cyan);font-size:0.9em;">window.ethereum</code> injection for standard requests.</li>
-            <li><strong>Product</strong> — Send/receive, activity, token management, address book, batch unwrap UX.</li>
+            <li><strong>dApps</strong> — EIP-1193 / EIP-6963 injection; connect, sign, typed data, transaction, and network switch requests appear inside NixWallet.</li>
+            <li><strong>Product</strong> — Send/receive, activity, token management, address book, batch unwrap UX, and WalletConnect request handling.</li>
         </ul>
     </div>
 
@@ -340,7 +340,7 @@
     <div class="slide" data-slide="7">
         <div class="slide-label mono">Stack &amp; rollout</div>
         <h2>Tech &amp; <span style="color:var(--cyan)">Networks</span></h2>
-        <p>Ships on <strong>Ethereum Sepolia</strong> today. <strong>Base</strong> and <strong>Arbitrum</strong> testnets are next for in-wallet switching — the same Fhenix-connected environments, not a separate “Fhenix mainnet.”</p>
+        <p>Ships across <strong>Ethereum Sepolia</strong>, <strong>Base Sepolia</strong>, and <strong>Arbitrum Sepolia</strong> with network-aware RPC, registry addresses, and chain switching.</p>
         <div class="pill-row">
             <div class="pill">React 19</div>
             <div class="pill">TypeScript</div>
@@ -348,21 +348,34 @@
             <div class="pill">Tailwind v4</div>
             <div class="pill">coFHE SDK</div>
             <div class="pill">ethers v6</div>
+            <div class="pill">EIP-6963</div>
+            <div class="pill">WalletConnect v2</div>
             <div class="pill">Hardhat</div>
             <div class="pill">Solidity 0.8.25</div>
         </div>
     </div>
 
-    <!-- 9: Vision one-liner -->
+    <!-- 9: DApp approval surface -->
     <div class="slide" data-slide="8">
+        <div class="slide-label mono">DApp approval model</div>
+        <h2>Requests Stay In <span style="color:var(--cyan)">NixWallet</span></h2>
+        <p>The companion dApp initiates connect, transfer, approve, wrap, reveal, confidential transfer, unwrap, and claim actions — but NixWallet owns the trusted confirmation surface.</p>
+        <ul class="core-list">
+            <li><strong>Unlock gate</strong> — requests can be visible while locked, but approval is blocked until unlock.</li>
+            <li><strong>Activity</strong> — injected dApp and WalletConnect transaction submissions are recorded alongside wallet-native history.</li>
+        </ul>
+    </div>
+
+    <!-- 10: Vision one-liner -->
+    <div class="slide" data-slide="9">
         <div class="slide-label mono">In one line</div>
         <div class="quote" style="margin-top:0;">
-            NixWallet is a <strong>confidential browser wallet</strong> for wrapping ERC-20s, moving encrypted amounts, and unwrapping back — with <strong>no centralized wallet server</strong>.
+            NixWallet is a <strong>confidential browser wallet</strong> for wrapping ERC-20s, moving encrypted amounts, approving dApps, and unwrapping back — with <strong>no centralized wallet server</strong>.
         </div>
     </div>
 
-    <!-- 10: Thank you -->
-    <div class="slide" data-slide="9">
+    <!-- 11: Thank you -->
+    <div class="slide" data-slide="10">
         <div class="slide-label mono">Created by Chris Gold</div>
         <h2>Thank You</h2>
         <p style="margin-bottom: 0.5rem;">Repo, demo, and contact.</p>
@@ -377,8 +390,8 @@
     </div>
 </div>
 
-<div id="progress" style="width: 10%"></div>
-<div id="counter" class="mono">1 / 10</div>
+<div id="progress" style="width: 9.09%"></div>
+<div id="counter" class="mono">1 / 11</div>
 <div id="nav-hint" class="mono">← → · click sides · or use arrows</div>
 
 <button type="button" id="nav-prev" class="slide-nav slide-nav-prev" aria-label="Previous slide">

@@ -28,6 +28,7 @@ Step-by-step walkthrough for demonstrating NixWallet.
 - Point out the **2x2 action grid**: Send, Wrap/Unwrap, Swap, Receive
 - Switch between the **Tokens**, **Activity**, and **Discover** tabs
 - Note the persistent side panel — stays open while navigating other sites
+- Point out that Activity includes wallet-native transactions plus external dApp/WalletConnect submissions
 
 ### 3. Receive Funds
 
@@ -68,8 +69,8 @@ Step-by-step walkthrough for demonstrating NixWallet.
 - Walk through each category:
   - **Security & Privacy** — Auto-lock timer, password-protected mnemonic viewer (enter password to reveal, auto-hides after 30s), clear transaction history, delete wallet
   - **Address Book** — Add/remove contacts (shared with Send screen)
-  - **Networks** — Show Sepolia (active); mention **Base testnet** and **Arbitrum testnet** as the other Fhenix-connected testnets targeted for the wallet.
-  - **Connected DApps** — Coming Soon overlay
+  - **Networks** — Show Ethereum Sepolia, Base Sepolia, and Arbitrum Sepolia.
+  - **Connected DApps** — Show connected origins, revoke behavior, WalletConnect pairing/session controls, and pending request context.
   - **About** — Version, links
 
 ### 9. Auto-Lock Demo
@@ -78,13 +79,25 @@ Step-by-step walkthrough for demonstrating NixWallet.
 - Leave the wallet idle
 - After 5 minutes, the wallet automatically locks and shows the unlock screen
 
-### 10. Swap (Coming Soon)
+### 10. Swap MVP
 
 - Click **Swap** on the Dashboard
-- Show the "Coming Soon" overlay
-- Explain: "This will integrate a Fhenix DEX router for confidential token swaps"
+- Show token selectors, amount/slippage controls, and quote state
+- Explain that execution is intentionally disabled until a live route is connected
 
-### 11. Discover
+### 11. Companion dApp Approval Flow
+
+- Run the companion dApp from `dapp/` at `http://localhost:5173/`
+- Click **Connect NixWallet** and show the request inside NixWallet
+- If locked, show that approval is blocked until unlock
+- Approve connection, select USDC/USDT, and demonstrate:
+  - public ERC-20 transfer
+  - approve + wrap
+  - reveal confidential balance
+  - generated read-only encrypted payload for confidential transfer
+  - unwrap request and claim preparation/finalization
+
+### 12. Discover
 
 - Switch to the **Discover** tab
 - Show the ecosystem links: Fhenix, CoFHE Docs, Redact Money, CarrotBox
@@ -96,4 +109,4 @@ Step-by-step walkthrough for demonstrating NixWallet.
 - **Why a wallet?** — The entry point for every user. Privacy starts at the wallet level.
 - **What's unique?** — Standard wallets don't support confidential tokens. NixWallet integrates FHE natively, turning any ERC-20 into a confidential token (e.g., USDC to cUSDC).
 - **Registry pattern** — Any ERC-20 can be wrapped into a confidential variant. First user deploys the wrapper; everyone else shares it.
-- **What's next?** — In-wallet swaps, dApp permissions manager, Base and Arbitrum testnets in the extension, richer token metadata (e.g. logos).
+- **What's next?** — richer external Activity decoding, pending-to-confirmed lifecycle for dApp transactions, guided claim flow, final WalletGuide verification, and broader browser testing.

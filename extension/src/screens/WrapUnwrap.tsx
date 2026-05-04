@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, ArrowRight, Loader2, CheckCircle, AlertCircle, ChevronDown, Eye, Lock, ExternalLink } from 'lucide-react';
 import { getSigner, getActiveNetwork, getProvider } from '../lib/wallet';
-import { getWrapperAddress, getOrCreateWrapper, REGISTRY_ADDRESS, WRAPPER_ABI } from '../lib/contracts';
+import { getWrapperAddress, getOrCreateWrapper, getRegistryAddress, WRAPPER_ABI } from '../lib/contracts';
 import { initCofheClient, decryptForTx, decryptForView, FheTypes } from '../lib/cofhe';
+import { withDecryptRetry } from '../lib/decryptRetry';
 import { addActivity } from '../lib/activity';
 import { getCustomTokens } from '../lib/tokens';
 import { ethers } from 'ethers';
@@ -33,8 +34,9 @@ export default function WrapUnwrap({ address: _address, privateKey, initialToken
   const [wrapperReady, setWrapperReady] = useState<boolean | null>(null);
   const [pendingClaims, setPendingClaims] = useState<{ ctHash: string; claimed: boolean }[]>([]);
   const [batchClaimStatus, setBatchClaimStatus] = useState<string | null>(null);
+  const [claimAttemptErrors, setClaimAttemptErrors] = useState<Record<string, string>>({});
 
-  const registryConfigured = REGISTRY_ADDRESS !== ethers.ZeroAddress;
+  const registryConfigured = getRegistryAddress() !== ethers.ZeroAddress;
 
   useEffect(() => {
     (async () => {
@@ -76,8 +78,10 @@ export default function WrapUnwrap({ address: _address, privateKey, initialToken
       const wrapper = new ethers.Contract(wrapperAddr, WRAPPER_ABI, provider);
       const claims = await wrapper.getUserClaims(_address);
       setPendingClaims(claims.filter((c: { claimed: boolean }) => !c.claimed));
+      setClaimAttemptErrors({});
     } catch {
       setPendingClaims([]);
+      setClaimAttemptErrors({});
     }
   };
 
@@ -91,6 +95,7 @@ export default function WrapUnwrap({ address: _address, privateKey, initialToken
     if (!selectedToken || pendingClaims.length === 0) return;
     setStatus('loading');
     setBatchClaimStatus(null);
+    setClaimAttemptErrors({});
 
     try {
       await initCofheClient(privateKey);
@@ -108,28 +113,20 @@ export default function WrapUnwrap({ address: _address, privateKey, initialToken
         const claim = pendingClaims[i];
         setBatchClaimStatus(`Decrypting claim ${i + 1}/${pendingClaims.length}...`);
 
-        let decryptedValue: bigint;
-        let signature: string;
-          let attempts = 0;
-          const maxAttempts = 10;
-          while (true) {
-            try {
-              const res = await decryptForTx(claim.ctHash, network.chainId, _address, 'withoutPermit');
-              decryptedValue = res.decryptedValue;
-              signature = res.signature;
-              break;
-            } catch (err: unknown) {
-              attempts++;
-              if (err instanceof Error && err.message.includes('404') && attempts < maxAttempts) {
-              await new Promise(r => setTimeout(r, 3000));
-              continue;
-            }
-            throw err;
+        const res = await withDecryptRetry(
+          () => decryptForTx(claim.ctHash, network.chainId, _address, 'withoutPermit'),
+          {
+            maxAttempts: 12,
+            baseDelayMs: 1500,
+            maxDelayMs: 6000,
+            onRetry: (attempt, maxAttempts) => {
+              setBatchClaimStatus(`Decrypting claim ${i + 1}/${pendingClaims.length} (retry ${attempt}/${maxAttempts})...`);
+            },
           }
-        }
+        );
         ids.push(claim.ctHash);
-        amounts.push(decryptedValue);
-        proofs.push(signature);
+        amounts.push(res.decryptedValue);
+        proofs.push(res.signature);
       }
 
       setBatchClaimStatus('Submitting batch claim...');
@@ -142,12 +139,20 @@ export default function WrapUnwrap({ address: _address, privateKey, initialToken
       await addActivity({
         id: tx.hash, type: 'unwrap', amount: `${display} ${selectedToken.symbol}`,
         status: 'pending', networkId: network.id, address: _address, hash: tx.hash, isConfidential: true,
+        tokenSymbol: selectedToken.symbol,
+        tokenAddress: selectedToken.address,
+        chainId: network.chainId,
+        txStage: 'batch-claim-submitted',
       });
 
       await tx.wait();
       await addActivity({
         id: tx.hash, type: 'unwrap', amount: `${display} ${selectedToken.symbol}`,
         status: 'success', networkId: network.id, address: _address, hash: tx.hash, isConfidential: true,
+        tokenSymbol: selectedToken.symbol,
+        tokenAddress: selectedToken.address,
+        chainId: network.chainId,
+        txStage: 'batch-claim-confirmed',
       });
 
       setStatus('success');
@@ -157,9 +162,52 @@ export default function WrapUnwrap({ address: _address, privateKey, initialToken
       fetchBal();
       if (privateBalance) handleDecryptBalance();
     } catch (e: unknown) {
-      setStatus('error');
-      setStatusMsg(e instanceof Error ? e.message.slice(0, 80) : 'Batch claim failed');
+      setBatchClaimStatus('Batch claim failed, trying one-by-one fallback...');
+      const errMap: Record<string, string> = {};
+      let successCount = 0;
+      try {
+        await initCofheClient(privateKey);
+        const network = getActiveNetwork();
+        const signer = getSigner(privateKey);
+        const provider = signer.provider!;
+        const wrapperAddr = selectedToken ? await getWrapperAddress(provider, selectedToken.address) : null;
+        if (!wrapperAddr) throw new Error('No wrapper found');
+        const wrapper = new ethers.Contract(wrapperAddr, WRAPPER_ABI, signer);
+
+        for (let i = 0; i < pendingClaims.length; i++) {
+          const claim = pendingClaims[i];
+          setBatchClaimStatus(`Fallback claim ${i + 1}/${pendingClaims.length}...`);
+          try {
+            const res = await withDecryptRetry(
+              () => decryptForTx(claim.ctHash, network.chainId, _address, 'withoutPermit'),
+              { maxAttempts: 8, baseDelayMs: 1000, maxDelayMs: 5000 }
+            );
+            const tx = await wrapper.claimUnshielded(claim.ctHash, res.decryptedValue, res.signature);
+            await tx.wait();
+            successCount++;
+          } catch (claimErr: unknown) {
+            errMap[claim.ctHash] = claimErr instanceof Error ? claimErr.message.slice(0, 80) : 'Claim failed';
+          }
+        }
+      } catch {
+        // handled below
+      }
+
+      setClaimAttemptErrors(errMap);
+      if (successCount > 0 && Object.keys(errMap).length === 0) {
+        setStatus('success');
+        setStatusMsg(`Fallback claimed ${successCount} pending request(s)`);
+      } else if (successCount > 0) {
+        setStatus('error');
+        setStatusMsg(`Partial fallback success (${successCount}/${pendingClaims.length})`);
+      } else {
+        setStatus('error');
+        setStatusMsg(e instanceof Error ? e.message.slice(0, 80) : 'Batch claim failed');
+      }
       setBatchClaimStatus(null);
+      await checkPendingClaims();
+      fetchBal();
+      if (privateBalance) handleDecryptBalance();
     }
   };
 
@@ -237,12 +285,20 @@ export default function WrapUnwrap({ address: _address, privateKey, initialToken
     await addActivity({
       id: wrapTx.hash, type: 'wrap', amount: `${amount} ${selectedToken.symbol}`,
       status: 'pending', networkId: network.id, address: _address, hash: wrapTx.hash, isConfidential: true,
+      tokenSymbol: selectedToken.symbol,
+      tokenAddress: selectedToken.address,
+      chainId: network.chainId,
+      txStage: 'shield-submitted',
     });
 
     await wrapTx.wait();
     await addActivity({
       id: wrapTx.hash, type: 'wrap', amount: `${amount} c${selectedToken.symbol}`,
       status: 'success', networkId: network.id, address: _address, hash: wrapTx.hash, isConfidential: true,
+      tokenSymbol: `c${selectedToken.symbol}`,
+      tokenAddress: selectedToken.address,
+      chainId: network.chainId,
+      txStage: 'shield-confirmed',
     });
   };
 
@@ -272,6 +328,10 @@ export default function WrapUnwrap({ address: _address, privateKey, initialToken
     await addActivity({
       id: reqTx.hash, type: 'unwrap', amount: `${amount} c${selectedToken.symbol}`,
       status: 'pending', networkId: network.id, address: _address, isConfidential: true,
+      tokenSymbol: `c${selectedToken.symbol}`,
+      tokenAddress: selectedToken.address,
+      chainId: network.chainId,
+      txStage: 'unshield-requested',
     });
 
     await reqTx.wait();
@@ -293,29 +353,21 @@ export default function WrapUnwrap({ address: _address, privateKey, initialToken
     try {
       await initCofheClient(privateKey);
 
-      let decryptedValue: bigint;
-      let signature: string;
-
       setStatusMsg('Syncing w/ Threshold Node...');
-      let attempts = 0;
-      const maxAttempts = 15;
-      while (true) {
-        try {
-          const network = getActiveNetwork();
-          const res = await decryptForTx(pendingCtHash, network.chainId, _address, 'withoutPermit');
-          decryptedValue = res.decryptedValue;
-          signature = res.signature;
-          break;
-        } catch (err: unknown) {
-          attempts++;
-          if (err instanceof Error && err.message.includes('404') && attempts < maxAttempts) {
-            setStatusMsg(`Syncing w/ Threshold Node (${attempts}/${maxAttempts})...`);
-            await new Promise(r => setTimeout(r, 4000));
-            continue;
-          }
-          throw err;
+      const network = getActiveNetwork();
+      const res = await withDecryptRetry(
+        () => decryptForTx(pendingCtHash, network.chainId, _address, 'withoutPermit'),
+        {
+          maxAttempts: 15,
+          baseDelayMs: 1200,
+          maxDelayMs: 6000,
+          onRetry: (attempt, maxAttempts) => {
+            setStatusMsg(`Syncing w/ Threshold Node (retry ${attempt}/${maxAttempts})...`);
+          },
         }
-      }
+      );
+      const decryptedValue = res.decryptedValue;
+      const signature = res.signature;
 
       setStatusMsg('Claiming unshielded tokens...');
 
@@ -328,17 +380,26 @@ export default function WrapUnwrap({ address: _address, privateKey, initialToken
       const finTx = await wrapper.claimUnshielded(pendingCtHash, decryptedValue, signature);
       setHashes(prev => ({ ...prev, approve: prev.action, action: finTx.hash }));
 
-      const network = getActiveNetwork();
       const claimedDisplay = ethers.formatUnits(decryptedValue, 6);
       await addActivity({
         id: finTx.hash, type: 'unwrap', amount: `${claimedDisplay} ${token.symbol}`,
         status: 'pending', networkId: network.id, address: _address, hash: finTx.hash, isConfidential: true,
+        tokenSymbol: token.symbol,
+        tokenAddress: token.address,
+        chainId: network.chainId,
+        txStage: 'claim-submitted',
+        requestId: pendingCtHash,
       });
 
       await finTx.wait();
       await addActivity({
         id: finTx.hash, type: 'unwrap', amount: `${claimedDisplay} ${token.symbol}`,
         status: 'success', networkId: network.id, address: _address, hash: finTx.hash, isConfidential: true,
+        tokenSymbol: token.symbol,
+        tokenAddress: token.address,
+        chainId: network.chainId,
+        txStage: 'claim-confirmed',
+        requestId: pendingCtHash,
       });
 
       setStatus('success');
@@ -348,6 +409,7 @@ export default function WrapUnwrap({ address: _address, privateKey, initialToken
     } catch (e: unknown) {
       setStatus('error');
       setStatusMsg(e instanceof Error ? e.message.slice(0, 80) : 'Finalize failed');
+      setClaimAttemptErrors((prev) => ({ ...prev, [pendingCtHash]: e instanceof Error ? e.message.slice(0, 80) : 'Finalize failed' }));
     }
   };
 
@@ -390,6 +452,10 @@ export default function WrapUnwrap({ address: _address, privateKey, initialToken
       </header>
 
       <main className="flex-1 w-full px-6 pt-6 relative z-10 overflow-y-auto no-scrollbar pb-4">
+        <div className="mb-4 p-3 bg-surface border border-ui text-[10px] uppercase tracking-widest text-sub font-bold">
+          Active Network: {getActiveNetwork().name} ({getActiveNetwork().chainId}) — switch in Settings if required.
+        </div>
+
         {/* Mode Toggle */}
         <div className="flex bg-surface p-1 mb-8">
           {(['wrap', 'unwrap'] as const).map(m => (
@@ -543,6 +609,18 @@ export default function WrapUnwrap({ address: _address, privateKey, initialToken
               >
                 Claim All Pending
               </button>
+              <div className="mt-3 space-y-1">
+                {pendingClaims.map((claim, idx) => (
+                  <div key={claim.ctHash} className="text-[9px] font-mono text-muted flex items-center justify-between">
+                    <span>Claim #{idx + 1}</span>
+                    {claimAttemptErrors[claim.ctHash] ? (
+                      <span className="text-red-400">{claimAttemptErrors[claim.ctHash]}</span>
+                    ) : (
+                      <span className="text-amber-400">Pending</span>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>

@@ -3,7 +3,7 @@
  */
 import { ethers } from 'ethers';
 
-/** Ethereum Sepolia only (CoFHE + extension RPC + deploy target must match). */
+/** Supported Fhenix host-chain testnets. */
 export const FHENIX_NETWORKS = {
   sepolia: {
     id: 'sepolia',
@@ -12,7 +12,22 @@ export const FHENIX_NETWORKS = {
     chainId: 11155111,
     explorer: 'https://sepolia.etherscan.io',
     symbol: 'ETH',
-    isComingSoon: false,
+  },
+  baseSepolia: {
+    id: 'baseSepolia',
+    name: 'Base Sepolia',
+    rpc: 'https://sepolia.base.org',
+    chainId: 84532,
+    explorer: 'https://sepolia.basescan.org',
+    symbol: 'ETH',
+  },
+  arbitrumSepolia: {
+    id: 'arbitrumSepolia',
+    name: 'Arbitrum Sepolia',
+    rpc: 'https://sepolia-rollup.arbitrum.io/rpc',
+    chainId: 421614,
+    explorer: 'https://sepolia.arbiscan.io',
+    symbol: 'ETH',
   },
 } as const;
 
@@ -29,6 +44,10 @@ export function setActiveNetwork(id: NetworkId) {
   if (typeof chrome !== 'undefined' && chrome.storage) {
     chrome.storage.local.set({ activeNetwork: id });
   }
+}
+
+export function getNetworkByChainId(chainId: number) {
+  return (Object.values(FHENIX_NETWORKS)).find((n) => n.chainId === chainId) || null;
 }
 
 export async function loadNetwork(): Promise<NetworkId> {

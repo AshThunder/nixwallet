@@ -55,15 +55,17 @@ This runs TypeScript (`tsc -b`) then Vite (CRXJS). Fix any red errors before con
 
 ## 5. Optional: environment variables
 
-For **better token suggestions** on Sepolia (Etherscan `tokentx`), you can set:
+For **better token suggestions** on Sepolia (Etherscan `tokentx`) and WalletConnect wallet-mode init, set:
 
 ```bash
 # extension/.env.local   (do not commit secrets; file is gitignored if listed in .gitignore)
 VITE_ETHERSCAN_API_KEY=your_etherscan_api_key
+VITE_WALLETCONNECT_PROJECT_ID=your_reown_project_id
 ```
 
 Rebuild after changing env: `npm run build`.  
 If you skip this, discovery still works via Blockscout, `getLogs`, and built-in probes.
+If WalletConnect project ID is missing, session pairing/listing checks stay unavailable in the DApps screen. Injected dApp flows through the local provider still work without a WalletConnect project ID.
 
 ---
 
@@ -84,6 +86,8 @@ If you skip this, discovery still works via Blockscout, `getLogs`, and built-in 
 2. Click the **NixWallet** toolbar icon. The wallet should open in the **side panel**.
 
 If the panel does not open, confirm the extension is **enabled** on `chrome://extensions/` and that you rebuilt after pulling new code.
+
+Sensitive dApp requests attempt to open the side panel automatically. Chrome can still block `sidePanel.open()` in some contexts, so if a request is queued but the panel does not appear, click the extension icon once and the pending request should be visible.
 
 ---
 
@@ -108,14 +112,16 @@ After code changes, run **`npm run build`** again and use **Reload** on `chrome:
 | Old UI after `git pull` | `npm install` (if lockfile changed), then `npm run build`, then **Reload** the extension. |
 | `tsc` / build errors | Use Node 18+. Read the error path and fix types or imports. |
 | RPC or network errors in the wallet | Sepolia must be reachable; check VPN/firewall. The app uses a public RPC by default (see `src/lib/wallet.ts`). |
-| Permission / host warnings in Chrome | Expected for a wallet that injects a provider; see `STORE_LISTING.md` / privacy policy for justification. |
+| Permission / host warnings in Chrome | Expected for a wallet that injects a provider and uses the side panel; review `manifest.json` and the project privacy notes before release. |
+| DApp request does not auto-open the side panel | Reload the extension after `npm run build`, confirm the dApp tab is refreshed, then retry from the user click. Chrome may still block side-panel opening in some contexts. |
+| Approval says `Unlock First` | Unlock NixWallet in the side panel. Requests can be visible while locked, but approval is intentionally blocked until unlock. |
 
 ---
 
 ## 10. Related docs
 
 - **[README.md](./README.md)** — architecture and screen overview  
-- **[STORE_LISTING.md](./STORE_LISTING.md)** — Chrome Web Store packaging and listing copy  
+- **[WALLETGUIDE_SUBMISSION.md](./WALLETGUIDE_SUBMISSION.md)** — Reown WalletGuide listing checklist and verification  
 - **Repo root [README.md](../README.md)** — full project (Hardhat, presentation site)
 
 Smart contracts for the on-chain registry live in **`../hardhat/`**; the extension points at a deployed registry address in code — see root README for the current Sepolia address.

@@ -52,7 +52,17 @@ const config= {
       url: "https://ethereum-sepolia-rpc.publicnode.com",
       chainId: 11155111,
       accounts: [deployerPrivateKey],
-    }
+    },
+    baseSepolia: {
+      url: "https://sepolia.base.org",
+      chainId: 84532,
+      accounts: [deployerPrivateKey],
+    },
+    arbitrumSepolia: {
+      url: "https://sepolia-rollup.arbitrum.io/rpc",
+      chainId: 421614,
+      accounts: [deployerPrivateKey],
+    },
   },
   // configuration for harhdat-verify plugin
   etherscan: {

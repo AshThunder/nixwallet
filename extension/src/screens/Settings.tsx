@@ -357,18 +357,16 @@ export default function SettingsScreen({ mnemonic, onBack, onReset, onNetworkCha
       {(Object.keys(FHENIX_NETWORKS) as NetworkId[]).map(id => {
         const net = FHENIX_NETWORKS[id];
         const isActive = id === network.id;
-        const isComingSoon = 'isComingSoon' in net && net.isComingSoon;
 
         return (
           <button
             key={id}
-            onClick={() => !isComingSoon && handleNetworkSwitch(id)}
-            disabled={isComingSoon}
+            onClick={() => handleNetworkSwitch(id)}
             className={`w-full flex items-center justify-between p-4 transition-all border-l-2 ${
               isActive
                 ? 'bg-brand-cyan/5 border-brand-cyan text-brand-cyan'
                 : 'bg-surface border-transparent text-sub hover:bg-input-field'
-            } ${isComingSoon ? 'opacity-40 cursor-not-allowed' : ''}`}
+            }`}
           >
             <div className="flex items-center gap-4">
               <Globe className={`w-4 h-4 ${isActive ? 'text-brand-cyan glow-cyan' : 'text-muted'}`} />
@@ -377,11 +375,7 @@ export default function SettingsScreen({ mnemonic, onBack, onReset, onNetworkCha
                 <div className="text-[9px] font-mono opacity-60 uppercase">{net.symbol}</div>
               </div>
             </div>
-            {isComingSoon ? (
-              <span className="text-[8px] font-bold text-muted uppercase tracking-widest px-2 py-0.5 border border-ui">Soon</span>
-            ) : (
-              <span className="text-[9px] text-muted font-mono">ID_{net.chainId}</span>
-            )}
+            <span className="text-[9px] text-muted font-mono">ID_{net.chainId}</span>
           </button>
         );
       })}

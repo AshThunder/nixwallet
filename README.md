@@ -22,7 +22,7 @@ Normal wallets only move **plaintext** ERC-20s: the chain and any observer see h
 
 **Fhenix** adds **confidential compute**: contracts can operate on **encrypted** token amounts using FHE, so the ledger does not expose the same level of financial detail for wrapped assets. There was still a gap: a **browser wallet** that feels like a normal Ethereum wallet but can **shield**, **transfer confidentially**, and **unwrap** using the official **FHERC20** pattern and **coFHE** tooling.
 
-NixWallet exists to make that workflow **self-custodial**, **local-first**, and **usable from Chrome** (side panel + optional `window.ethereum` for dApps) on **Ethereum Sepolia** today, with **Base testnet** and **Arbitrum testnet** next for in-wallet multi-network support (there is no separate “Fhenix mainnet” — those three are the relevant environments).
+NixWallet exists to make that workflow **self-custodial**, **local-first**, and **usable from Chrome** through the side panel, injected dApp provider, and WalletConnect wallet mode on **Ethereum Sepolia**, **Base Sepolia**, and **Arbitrum Sepolia**.
 
 ---
 
@@ -30,9 +30,10 @@ NixWallet exists to make that workflow **self-custodial**, **local-first**, and 
 
 | Piece | What it does |
 |-------|----------------|
-| **Extension (React + Vite + CRXJS)** | Side panel UI, onboarding, vault unlock, send/receive, wrap/unwrap, settings. No standalone backend. |
+| **Extension (React + Vite + CRXJS)** | Side panel UI, onboarding, vault unlock, send/receive, wrap/unwrap, settings, dApp approvals, WalletConnect wallet mode. No standalone backend. |
+| **Companion dApp (React + Vite)** | External test dApp for public ERC-20 and FHERC20 flows. It initiates requests; NixWallet owns all signing and approval UX. |
 | **Encrypted vault** | Seed / imported keys stored in `chrome.storage.local` as **AES-GCM** ciphertext; key from **PBKDF2** + password. Keys live in memory only while unlocked. |
-| **Background service worker** | Auto-lock timer, `KEEP_ALIVE` on user activity, and a small **JSON-RPC proxy** for dApp-related `eth_*` calls. |
+| **Background service worker** | Auto-lock timer, `KEEP_ALIVE` on user activity, dApp permission enforcement, side-panel approval requests, and a small **JSON-RPC proxy** for dApp-related `eth_*` calls. |
 | **coFHE SDK (`@cofhe/sdk`)** | Client-side **encrypt** (e.g. amounts as encrypted inputs), **decryptForView** (show balances in UI), **decryptForTx** (threshold proofs for claims and txs). |
 | **ethers.js** | Sepolia RPC, contract calls, signing. |
 | **Solidity (Hardhat)** | **`FHERC20WrapperRegistry`** — factory/registry for one confidential wrapper per underlying ERC-20. **`FHERC20UnderlyingWrapper`** — concrete wrapper (`shield`, `unshield`, `claimUnshielded`, `claimUnshieldedBatch`, `confidentialTransfer`, etc.). |
@@ -92,11 +93,17 @@ Think in **three pillars**: **wrap (shield)**, **confidential use**, **unwrap (u
 - **Auto-Lock Timer** — Configurable inactivity timeout (5, 10, or 30 minutes) with background service worker integration
 - **Unified Address Book** — Shared contacts between Settings and Send screens
 - **Transaction History** — Enriched activity log with explorer links, confidential indicators, and recipient info
+- **External Transaction Activity** — Activity tab records transactions submitted from injected dApps and WalletConnect sessions, not only wallet-native flows
 - **Password-Protected Secrets** — Mnemonic reveal requires password re-verification with auto-hide timer
-- **Network** — Ethereum Sepolia testnet
-- **In-Wallet Swaps** — *(Coming Soon)*
-- **DApp Connection Manager** — *(Coming Soon)*
-- **Multi-Network Support** — *(Coming Soon)* Base testnet and Arbitrum testnet support
+- **Realtime Price Panel** — Live USD pricing from CoinGecko for ETH and verified tokens, with stale-data indicators
+- **Network Support** — Ethereum Sepolia, Base Sepolia, and Arbitrum Sepolia testnets
+- **DApp Connection Manager** — Connected-site permissions list with revoke support in Settings
+- **In-Wallet DApp Approvals** — External connect/sign/typed-data/transaction/network-switch requests appear in NixWallet with approve/reject controls; approval requires the wallet to be unlocked
+- **EIP-1193 / EIP-6963 Provider** — Injected provider announces NixWallet to dApps and prefers the current typed-data-capable build
+- **WalletConnect v2 Wallet Mode** — Pair, approve sessions, handle session requests, and align WalletGuide metadata
+- **Confidential Claim Reliability** — Retry-aware decrypt/finalize flow with batch-claim fallback
+- **Activity Lifecycle Details** — Enriched confidential transaction stages in local history
+- **In-Wallet Swaps (Wave 3 MVP)** — Token selectors + quote scaffolding (execution route stays disabled in this release)
 
 ---
 
@@ -170,6 +177,11 @@ nixwallet/
 │   │   └── background.ts   # Service worker (auto-lock timer, RPC proxy)
 │   ├── manifest.json       # Extension manifest (side panel, permissions)
 │   └── dist/               # Built extension output
+├── dapp/                   # Companion dApp for testing NixWallet-owned approvals
+│   └── src/
+│       ├── App.tsx         # Stablecoin manager UI
+│       ├── lib/            # Nix provider, CoFHE browser adapter, contract helpers
+│       └── config/         # Supported networks and default tokens
 ├── hardhat/                # Smart contract development
 │   ├── contracts/
 │   │   ├── FHERC20WrapperRegistry.sol    # Factory/registry for FHERC20 wrappers
@@ -200,7 +212,9 @@ npx hardhat compile
 npx hardhat deploy --network sepolia --tags FHERC20
 ```
 
-**Deployed Registry (Sepolia):** `0xEE098B005e1B979Ca32ac427c367C343879e502C`
+**Deployed Registry (Sepolia):** `0xEE098B005e1B979Ca32ac427c367C343879e502C`  
+**Deployed Registry (Base Sepolia):** `0xfD4223809FE333FC23468F76bB38BE4169853761`  
+**Deployed Registry (Arbitrum Sepolia):** `0xe572ED5b27b44641Da441cE479643B30CF200E9c`
 
 ---
 
@@ -212,6 +226,42 @@ npx hardhat deploy --network sepolia --tags FHERC20
 - **coFHE Docs**: [cofhe-docs.fhenix.zone](https://cofhe-docs.fhenix.zone)
 - **Creator**: [@ChrisGold__](https://x.com/ChrisGold__)
 - **Website**: [NixWallet](https://nixwallet.vercel.app/)
+
+## Realtime prices
+
+NixWallet fetches market prices from CoinGecko and applies a trust policy before showing fiat values:
+
+- **Allowlist + liquidity checks**: only verified token addresses with sufficient market depth show USD values.
+- **Unverified or low-liquidity tokens**: balances are shown, fiat value is hidden.
+- **Caching + stale indicator**: cached prices are reused on temporary API failures, and stale status is shown in UI.
+
+## WalletConnect listing readiness
+
+- **Env-only project ID**: configure `VITE_WALLETCONNECT_PROJECT_ID` in `extension/.env.local` (never hardcode in source).
+- **Request approvals**: WalletConnect requests (`eth_sign`, `personal_sign`, `eth_signTypedData_v4`, `eth_sendTransaction`, etc.) require explicit approve/reject in NixWallet.
+- **Metadata alignment**: EIP-6963 injected metadata and WalletConnect wallet metadata are sourced from shared constants for consistent name/URL/RDNS.
+- **WalletGuide submission**: use the prepared checklist in `extension/WALLETGUIDE_SUBMISSION.md` to submit in Reown dashboard and track listing status.
+- **Verification**: run the Explorer API checks from `extension/WALLETGUIDE_SUBMISSION.md` after submission to confirm discoverability.
+
+## Companion dApp
+
+The `dapp/` package is an external test surface for NixWallet. It supports default Sepolia USDT/USDC flows plus manual token fallback:
+
+- connect NixWallet and display wallet/account/network/provider build
+- switch supported networks through NixWallet
+- public ERC-20 transfer
+- wrapper creation, approval, and wrap/shield
+- confidential balance reveal through CoFHE typed-data approvals
+- confidential transfer with generated read-only encrypted payload
+- unwrap request and claim preparation/finalization
+
+Run it locally with:
+
+```bash
+cd dapp
+npm install
+npm run dev
+```
 
 ---
 

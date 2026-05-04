@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { CheckCircle2, X } from 'lucide-react';
 import { isVaultInitialized, unlockVault, createVault, cacheSession, getSessionCache, clearSessionCache } from './lib/vault';
 import type { VaultData } from './lib/vault';
 import { getActiveNetwork, setActiveNetwork, loadNetwork, getAccountByIndex, type NetworkId } from './lib/wallet';
@@ -12,8 +13,15 @@ import ManageTokens from './screens/ManageTokens';
 import Receive from './screens/Receive';
 import SwapScreen from './screens/Swap';
 import DappsScreen from './screens/Dapps';
+import DappRequestApprovalOverlay from './components/DappRequestApprovalOverlay';
 
 type Screen = 'loading' | 'onboarding' | 'unlock' | 'dashboard' | 'wrap' | 'send' | 'receive' | 'settings' | 'manage-tokens' | 'swap' | 'dapps';
+type TransactionToast = {
+  id: number;
+  title: string;
+  message: string;
+  hash?: string;
+};
 
 function App() {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
@@ -24,6 +32,7 @@ function App() {
   const [accountIndex, setAccountIndex] = useState(0);
   const [importedAccounts, setImportedAccounts] = useState<{ address: string; privateKey: string; name?: string }[]>([]);
   const [network, setNetwork] = useState(getActiveNetwork());
+  const [transactionToast, setTransactionToast] = useState<TransactionToast | null>(null);
   const [selectedToken, setSelectedToken] = useState<{
     symbol: string;
     address: string;
@@ -104,6 +113,27 @@ function App() {
     chrome.runtime.onMessage.addListener(listener);
     return () => chrome.runtime.onMessage.removeListener(listener);
   }, []);
+
+  useEffect(() => {
+    const listener = (message: { type?: string; payload?: { title?: string; message?: string; hash?: string } }) => {
+      if (message?.type !== 'TRANSACTION_SUCCESS_NOTIFICATION') return;
+      const payload = message.payload || {};
+      setTransactionToast({
+        id: Date.now(),
+        title: payload.title || 'Transaction successful',
+        message: payload.message || 'Your transaction was submitted successfully.',
+        hash: payload.hash,
+      });
+    };
+    chrome.runtime.onMessage.addListener(listener);
+    return () => chrome.runtime.onMessage.removeListener(listener);
+  }, []);
+
+  useEffect(() => {
+    if (!transactionToast) return;
+    const id = window.setTimeout(() => setTransactionToast(null), 6000);
+    return () => window.clearTimeout(id);
+  }, [transactionToast]);
 
   useEffect(() => {
     const resetTimer = () => {
@@ -195,12 +225,28 @@ function App() {
     setScreen('onboarding');
   };
 
-  const handleNetworkChange = (id: string) => {
-    setActiveNetwork(id as NetworkId);
+  const handleNetworkChange = (id: NetworkId) => {
+    setActiveNetwork(id);
     setNetwork(getActiveNetwork());
+    chrome.runtime.sendMessage({ type: 'NETWORK_CHANGED', payload: { chainId: getActiveNetwork().chainId } }).catch(() => {});
     // Force re-render
     setScreen('dashboard');
   };
+
+  const withRequestOverlay = (content: React.ReactNode) => (
+    <>
+      {content}
+      {transactionToast && (
+        <TransactionSuccessToast
+          toast={transactionToast}
+          onClose={() => setTransactionToast(null)}
+        />
+      )}
+      {screen !== 'loading' && screen !== 'onboarding' && (
+        <DappRequestApprovalOverlay address={address} />
+      )}
+    </>
+  );
 
   if (screen === 'loading') {
     return (
@@ -215,31 +261,31 @@ function App() {
   }
 
   if (screen === 'unlock') {
-    return <UnlockScreen onUnlock={handleUnlock} />;
+    return withRequestOverlay(<UnlockScreen onUnlock={handleUnlock} />);
   }
 
   if (screen === 'wrap') {
-    return <WrapUnwrap address={address} privateKey={privateKey} initialToken={selectedToken} onBack={() => setScreen('dashboard')} />;
+    return withRequestOverlay(<WrapUnwrap address={address} privateKey={privateKey} initialToken={selectedToken} onBack={() => setScreen('dashboard')} />);
   }
 
   if (screen === 'send') {
-    return <SendScreen address={address} privateKey={privateKey} initialToken={selectedToken} onBack={() => setScreen('dashboard')} />;
+    return withRequestOverlay(<SendScreen address={address} privateKey={privateKey} initialToken={selectedToken} onBack={() => setScreen('dashboard')} />);
   }
 
   if (screen === 'receive') {
-    return <Receive address={address} onBack={() => setScreen('dashboard')} />;
+    return withRequestOverlay(<Receive address={address} onBack={() => setScreen('dashboard')} />);
   }
 
   if (screen === 'swap') {
-    return <SwapScreen onBack={() => setScreen('dashboard')} />;
+    return withRequestOverlay(<SwapScreen onBack={() => setScreen('dashboard')} />);
   }
 
   if (screen === 'dapps') {
-    return <DappsScreen onBack={() => setScreen('settings')} />;
+    return withRequestOverlay(<DappsScreen onBack={() => setScreen('settings')} address={address} privateKey={privateKey} onNetworkChange={handleNetworkChange} />);
   }
 
   if (screen === 'settings') {
-    return (
+    return withRequestOverlay(
       <SettingsScreen
         address={address}
         mnemonic={mnemonic}
@@ -252,7 +298,7 @@ function App() {
   }
 
   if (screen === 'manage-tokens') {
-    return (
+    return withRequestOverlay(
       <ManageTokens
         network={network}
         walletAddress={address}
@@ -261,7 +307,7 @@ function App() {
     );
   }
 
-  return (
+  return withRequestOverlay(
     <Dashboard
       address={address}
       privateKey={privateKey}
@@ -278,8 +324,38 @@ function App() {
       }}
       onAccountChange={handleAccountChange}
       onImportAccount={handleImportAccount}
+      onNetworkChange={handleNetworkChange}
       onLock={handleLock}
     />
+  );
+}
+
+function TransactionSuccessToast({ toast, onClose }: { toast: TransactionToast; onClose: () => void }) {
+  return (
+    <div className="fixed top-4 left-4 right-4 z-[260] border border-brand-cyan/35 bg-white text-slate-950 shadow-[0_18px_50px_rgba(0,0,0,0.35)]">
+      <div className="flex items-start gap-3 p-3">
+        <div className="mt-0.5 text-brand-cyan">
+          <CheckCircle2 className="w-5 h-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 text-[11px] text-slate-500">
+            <span className="font-bold">NixWallet</span>
+            <span>Just now</span>
+          </div>
+          <div className="mt-1 text-sm font-semibold">{toast.title}</div>
+          <div className="text-xs text-slate-600 break-all">
+            {toast.hash ? `${toast.message} ${toast.hash}` : toast.message}
+          </div>
+        </div>
+        <button
+          onClick={onClose}
+          className="shrink-0 rounded-full bg-slate-100 p-1 text-slate-500 hover:bg-slate-200 hover:text-slate-900"
+          aria-label="Close transaction notification"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
   );
 }
 

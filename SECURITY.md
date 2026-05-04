@@ -15,6 +15,7 @@ NixWallet handles private keys and seed phrases. The security model is designed 
 | Address book | `chrome.storage.local` | Plaintext (no sensitive data) |
 | Saved custom tokens | `chrome.storage.local` | Plaintext (contract addresses and metadata only) |
 | Transaction history | `chrome.storage.local` | Plaintext (publicly visible on-chain anyway) |
+| DApp permissions | `chrome.storage.local` | Plaintext origin/account/chain metadata used to enforce connected-site access |
 
 ### Key Security Features
 
@@ -30,12 +31,17 @@ NixWallet handles private keys and seed phrases. The security model is designed 
 
 - **Scoped Activity Clearing**: Transaction history can be cleared globally or per-network/address via the Settings Security panel.
 
+- **DApp Approval Gate**: Sensitive injected dApp requests are queued in NixWallet and require explicit approve/reject. Approval is blocked while the wallet is locked, including at the background message-handler layer.
+
+- **Connected-Origin Permissions**: dApps must connect before non-connect sensitive methods are accepted. Revoking an origin clears account access for subsequent `eth_accounts` calls.
+
 ### What We Don't Protect Against
 
 - **Malicious browser extensions** with full permissions can read `chrome.storage.local`
 - **Physical device access** when the wallet is unlocked (mitigated by auto-lock)
 - **Clipboard sniffing** if the user copies their seed phrase (mitigated by auto-hide timer)
 - **RPC endpoint compromise** — the extension trusts the configured RPC URL
+- **Malicious dApps** can request signatures or transactions; NixWallet displays approval details, but users must still review origins, destinations, calldata, and typed data carefully
 
 ### Responsible Disclosure
 

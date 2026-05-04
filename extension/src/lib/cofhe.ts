@@ -10,11 +10,15 @@
 
 import { Encryptable, FheTypes } from '@cofhe/sdk';
 import { createCofheConfig, createCofheClient } from '@cofhe/sdk/web';
-import { sepolia as cofheSepolia } from '@cofhe/sdk/chains';
+import {
+  sepolia as cofheSepolia,
+  baseSepolia as cofheBaseSepolia,
+  arbSepolia as cofheArbSepolia,
+} from '@cofhe/sdk/chains';
 import { PermitUtils } from '@cofhe/sdk/permits';
 import { createWalletClient, createPublicClient, http } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { sepolia as viemSepolia } from 'viem/chains';
+import { sepolia as viemSepolia, baseSepolia as viemBaseSepolia, arbitrumSepolia as viemArbitrumSepolia } from 'viem/chains';
 import { getActiveNetwork } from './wallet';
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- SDK types are opaque */
@@ -25,6 +29,7 @@ type ViemWalletClient = any;
 
 let _client: CofheClient | null = null;
 let _currentPk: string | null = null;
+let _currentChainId: number | null = null;
 let _publicClient: ViemPublicClient | null = null;
 let _walletClient: ViemWalletClient | null = null;
 
@@ -36,27 +41,39 @@ let _walletClient: ViemWalletClient | null = null;
 export async function initCofheClient(privateKeyHex: string) {
   // Ensure 0x prefix
   const pk = privateKeyHex.startsWith('0x') ? privateKeyHex : `0x${privateKeyHex}`;
+  const network = getActiveNetwork();
   
-  if (_client && _currentPk === pk) return;
+  if (_client && _currentPk === pk && _currentChainId === network.chainId) return;
 
   // Reset state for fresh initialization
   _client = null;
   _publicClient = null;
   _walletClient = null;
   _currentPk = null;
+  _currentChainId = null;
 
   const account = privateKeyToAccount(pk as `0x${string}`);
   
-  const rpcUrl = getActiveNetwork().rpc;
+  const rpcUrl = network.rpc;
+  const viemChain = network.id === 'baseSepolia'
+    ? viemBaseSepolia
+    : network.id === 'arbitrumSepolia'
+      ? viemArbitrumSepolia
+      : viemSepolia;
+  const cofheChain = network.id === 'baseSepolia'
+    ? cofheBaseSepolia
+    : network.id === 'arbitrumSepolia'
+      ? cofheArbSepolia
+      : cofheSepolia;
 
   _publicClient = createPublicClient({
-    chain: viemSepolia,
+    chain: viemChain,
     transport: http(rpcUrl)
   });
 
   _walletClient = createWalletClient({
     account,
-    chain: viemSepolia,
+    chain: viemChain,
     transport: http(rpcUrl)
   });
 
@@ -65,7 +82,7 @@ export async function initCofheClient(privateKeyHex: string) {
   const config = createCofheConfig({
     environment: 'web',
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- SDK chain type mismatch
-    supportedChains: [cofheSepolia as any],
+    supportedChains: [cofheChain as any],
     fheKeyStorage: null,
   });
 
@@ -73,6 +90,7 @@ export async function initCofheClient(privateKeyHex: string) {
   _client = createCofheClient(config as any);
   await _client.connect(_publicClient, _walletClient);
   _currentPk = pk;
+  _currentChainId = network.chainId;
 }
 
 /** Get the initialized CoFHE client */

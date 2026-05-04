@@ -5,6 +5,7 @@
  * per underlying ERC-20 the first time anyone interacts with it.
  */
 import { ethers } from 'ethers';
+import { getActiveNetwork } from './wallet';
 
 // ABI for FHERC20 ERC20 wrapper contracts
 export const WRAPPER_ABI = [
@@ -24,18 +25,28 @@ export const REGISTRY_ABI = [
   'function wrapperCount() external view returns (uint256)',
 ] as const;
 
-// Set after deploying FHERC20WrapperRegistry to Sepolia
-export const REGISTRY_ADDRESS = '0xEE098B005e1B979Ca32ac427c367C343879e502C';
+export const REGISTRY_ADDRESSES = {
+  sepolia: '0xEE098B005e1B979Ca32ac427c367C343879e502C',
+  baseSepolia: '0xfD4223809FE333FC23468F76bB38BE4169853761',
+  arbitrumSepolia: '0xe572ED5b27b44641Da441cE479643B30CF200E9c',
+} as const;
+
+export function getRegistryAddress(): string {
+  const network = getActiveNetwork();
+  return REGISTRY_ADDRESSES[network.id] || ethers.ZeroAddress;
+}
 
 // In-memory cache so we don't re-query the registry for the same token
 const _wrapperCache: Record<string, string> = {};
 
 /** Read-only lookup: returns the wrapper address or null if none deployed yet */
 export async function getWrapperAddress(provider: ethers.Provider, underlying: string): Promise<string | null> {
+  const registryAddress = getRegistryAddress();
+  if (registryAddress === ethers.ZeroAddress) return null;
   const key = underlying.toLowerCase();
   if (_wrapperCache[key]) return _wrapperCache[key];
 
-  const registry = new ethers.Contract(REGISTRY_ADDRESS, REGISTRY_ABI, provider);
+  const registry = new ethers.Contract(registryAddress, REGISTRY_ABI, provider);
   const addr: string = await registry.getWrapper(key);
   if (addr === ethers.ZeroAddress) return null;
 
@@ -45,10 +56,12 @@ export async function getWrapperAddress(provider: ethers.Provider, underlying: s
 
 /** Deploy wrapper via registry if it doesn't exist yet, then return its address */
 export async function getOrCreateWrapper(signer: ethers.Signer, underlying: string): Promise<string> {
+  const registryAddress = getRegistryAddress();
+  if (registryAddress === ethers.ZeroAddress) throw new Error('Registry not deployed on active network');
   const key = underlying.toLowerCase();
   if (_wrapperCache[key]) return _wrapperCache[key];
 
-  const registry = new ethers.Contract(REGISTRY_ADDRESS, REGISTRY_ABI, signer);
+  const registry = new ethers.Contract(registryAddress, REGISTRY_ABI, signer);
   const tx = await registry.getOrCreateWrapper(key);
   await tx.wait();
 

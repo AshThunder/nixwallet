@@ -15,6 +15,12 @@ export interface Activity {
   isConfidential: boolean;
   hash?: string; // Transaction hash for explorer
   recipient?: string;
+  tokenSymbol?: string;
+  tokenAddress?: string;
+  chainId?: number;
+  txStage?: string;
+  requestId?: string;
+  errorCode?: string;
 }
 
 const STORAGE_KEY = 'nixwallet_activity';
@@ -55,6 +61,18 @@ export async function addActivity(activity: Omit<Activity, 'timestamp'>) {
   }
 
   await setStorageData(STORAGE_KEY, history.slice(0, 50));
+
+  if (activity.status === 'success' && activity.hash && typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+    const label = activity.tokenSymbol ? `${activity.type} ${activity.tokenSymbol}` : activity.type;
+    chrome.runtime.sendMessage({
+      type: 'TRANSACTION_SUCCESS_NOTIFICATION',
+      payload: {
+        title: 'Transaction successful',
+        message: `${label.replace(/-/g, ' ')} confirmed.`,
+        hash: activity.hash,
+      },
+    }).catch(() => {});
+  }
 }
 
 /** Get all activities for a specific network and address */

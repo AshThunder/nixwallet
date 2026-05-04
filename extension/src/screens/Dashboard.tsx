@@ -1,15 +1,17 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Shield, ArrowRightLeft, ArrowUpRight, ArrowDownRight,
   Lock, Copy, Check, Settings, LogOut, RefreshCw, Eye, Loader2, X, ExternalLink, ChevronDown, Plus, AlertCircle,
   DollarSign
 } from 'lucide-react';
-import { shortenAddress, formatBalance, getProvider } from '../lib/wallet';
+import { shortenAddress, formatBalance, getProvider, FHENIX_NETWORKS } from '../lib/wallet';
+import type { NetworkId } from '../lib/wallet';
 import { getWrapperAddress } from '../lib/contracts';
 import { initCofheClient, decryptForView, FheTypes } from '../lib/cofhe';
 import { getActivities, type Activity } from '../lib/activity';
 import { ensureDefaults, type TokenMetadata } from '../lib/tokens';
+import { getNativeEthPrice, getUsdPrices, type TokenPriceResult } from '../lib/prices';
 import { ethers } from 'ethers';
 import Discover from './Discover';
 import ThemeToggle from '../components/ThemeToggle';
@@ -27,6 +29,7 @@ interface Props {
   onNavigate: (screen: string, tokenData?: { symbol: string; address: string; decimals?: number }) => void;
   onAccountChange?: (arg: number | string) => void;
   onImportAccount?: (acc: { address: string; privateKey: string; name?: string }, password: string) => Promise<boolean>;
+  onNetworkChange?: (id: NetworkId) => void;
   onLock: () => void;
 }
 
@@ -44,6 +47,7 @@ export default function Dashboard({
   onNavigate,
   onAccountChange,
   onImportAccount,
+  onNetworkChange,
   onLock
 }: Props) {
   const [activeTab, setActiveTab] = useState<'tokens' | 'activity' | 'discover'>('tokens');
@@ -59,7 +63,13 @@ export default function Dashboard({
   const [showAccountPicker, setShowAccountPicker] = useState(false);
   const [accountCount, setAccountCount] = useState(1);
   const [showTokenPicker, setShowTokenPicker] = useState<{ open: boolean; action: 'send' | 'wrap' }>({ open: false, action: 'send' });
+  const [showNetworkPicker, setShowNetworkPicker] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [ethUsdPrice, setEthUsdPrice] = useState<number | null>(null);
+  const [tokenPrices, setTokenPrices] = useState<Record<string, TokenPriceResult>>({});
+  const [pricesLastUpdated, setPricesLastUpdated] = useState<number | null>(null);
+  const [pricesStale, setPricesStale] = useState(false);
+  const networkPickerRef = useRef<HTMLDivElement | null>(null);
 
   const key = `custom_tokens_${network.id}`;
   const [customMetadata, setCustomMetadata] = useState<TokenMetadata[]>([]);
@@ -101,6 +111,19 @@ export default function Dashboard({
         }
         return updated;
       });
+
+      const [nativePrice, prices] = await Promise.all([
+        getNativeEthPrice(network.id),
+        getUsdPrices(network.id, customs),
+      ]);
+      setEthUsdPrice(nativePrice.usd);
+      setTokenPrices(prices);
+      const latest = Math.max(
+        nativePrice.lastUpdated,
+        ...Object.values(prices).map((p) => p.lastUpdated)
+      );
+      setPricesLastUpdated(Number.isFinite(latest) ? latest : null);
+      setPricesStale(nativePrice.stale || Object.values(prices).some((p) => p.stale));
     } catch (e: unknown) {
       let msg = e instanceof Error ? e.message.trim() : 'Failed to connect to network';
       if (msg.length > 72) msg = `${msg.slice(0, 72)}…`;
@@ -179,6 +202,11 @@ export default function Dashboard({
   }, [key, showAccountPicker]);
 
   const priority = ['USDT', 'USDC'];
+
+  const formatUsd = (value: number | null): string => {
+    if (typeof value !== 'number' || !Number.isFinite(value)) return '--';
+    return value.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 2 });
+  };
   
   const customHybridTokens = [
     ...customMetadata
@@ -198,9 +226,36 @@ export default function Dashboard({
         ...t,
         balance: customTokenBalances[t.address] || '0.0000',
         privateBalance: customPrivateBalances[t.address] || '***',
+        price: tokenPrices[t.address.toLowerCase()]?.usd ?? null,
+        trustStatus: tokenPrices[t.address.toLowerCase()]?.trustStatus ?? 'noData',
         icon: iconNode
       };
   });
+
+  useEffect(() => {
+    if (!showNetworkPicker) return;
+
+    const onPointerDown = (event: MouseEvent) => {
+      if (!networkPickerRef.current) return;
+      const target = event.target as Node | null;
+      if (target && !networkPickerRef.current.contains(target)) {
+        setShowNetworkPicker(false);
+      }
+    };
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowNetworkPicker(false);
+      }
+    };
+
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [showNetworkPicker]);
 
   return (
     <div className="w-full min-h-screen overflow-hidden bg-app text-main font-brand relative flex flex-col">
@@ -209,7 +264,7 @@ export default function Dashboard({
       <div className="absolute bottom-[-100px] right-[-100px] w-64 h-64 bg-brand-navy/60 rounded-full mix-blend-screen filter blur-[80px]" />
 
       {/* Header */}
-      <header className="w-full p-6 flex justify-between items-center relative z-10">
+      <header className="w-full p-6 flex justify-between items-center relative z-40">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-brand-cyan flex items-center justify-center">
             <Shield className="w-5 h-5 text-brand-midnight" />
@@ -218,11 +273,44 @@ export default function Dashboard({
             Nix
           </span>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="px-3 py-1 bg-surface border-l-2 border-brand-cyan text-label-caps text-brand-cyan flex items-center gap-2">
+        <div ref={networkPickerRef} className="flex items-center gap-2 relative">
+          <button
+            onClick={() => setShowNetworkPicker((prev) => !prev)}
+            className="px-3 py-1 bg-surface border-l-2 border-brand-cyan text-label-caps text-brand-cyan flex items-center gap-2 hover:bg-brand-cyan/5 transition-colors"
+          >
             <div className="w-1.5 h-1.5 bg-brand-cyan animate-pulse" />
             {network.name}
-          </div>
+            <ChevronDown className={`w-3 h-3 transition-transform ${showNetworkPicker ? 'rotate-180' : ''}`} />
+          </button>
+          <AnimatePresence>
+            {showNetworkPicker && (
+              <motion.div
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                className="absolute right-0 top-full mt-2 z-[100] w-44 bg-app border border-ui shadow-card"
+              >
+                {(Object.keys(FHENIX_NETWORKS) as NetworkId[]).map((id) => {
+                  const n = FHENIX_NETWORKS[id];
+                  const active = n.id === network.id;
+                  return (
+                    <button
+                      key={id}
+                      onClick={() => {
+                        onNetworkChange?.(id);
+                        setShowNetworkPicker(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 border-b border-ui last:border-b-0 text-xs uppercase tracking-wider transition-colors ${
+                        active ? 'text-brand-cyan bg-brand-cyan/10' : 'text-sub bg-app hover:text-main hover:bg-input-field'
+                      }`}
+                    >
+                      {n.name}
+                    </button>
+                  );
+                })}
+              </motion.div>
+            )}
+          </AnimatePresence>
           <ThemeToggle theme={theme} onToggle={onToggleTheme} />
           <button onClick={() => onNavigate('settings')} className="p-2 bg-surface text-sub hover:text-brand-cyan transition-colors border border-ui">
             <Settings className="w-4 h-4" />
@@ -267,6 +355,14 @@ export default function Dashboard({
             <div className="text-5xl font-bold tracking-tighter flex items-baseline gap-2 font-brand">
               {ethBalance}
               <span className="text-lg font-normal text-brand-cyan">{network.symbol}</span>
+            </div>
+            <div className="text-[13px] text-muted mt-2">
+              {formatUsd(Number(ethBalance || '0') * (ethUsdPrice ?? 0))}
+              {pricesLastUpdated && (
+                <span className="ml-2 font-mono">
+                  {pricesStale ? 'stale' : 'realtime'}
+                </span>
+              )}
             </div>
           </div>
 
@@ -369,7 +465,7 @@ export default function Dashboard({
                   </div>
                   <div className="text-right">
                     <div className="font-brand font-bold text-sm tracking-tight">{ethBalance}</div>
-                    <div className="text-[10px] text-slate-600 font-mono">0.00 USD</div>
+                    <div className="text-[12px] text-slate-600 font-mono">{formatUsd(Number(ethBalance || '0') * (ethUsdPrice ?? 0))}</div>
                   </div>
                 </div>
 
@@ -414,6 +510,11 @@ export default function Dashboard({
                          <div className="min-w-0">
                             <div className="font-brand font-bold text-2xl leading-none mb-1 text-main truncate">{token.balance === '0.0000' ? '0.00' : token.balance}</div>
                             <div className="text-[9px] font-mono text-muted uppercase tracking-widest leading-none truncate">{token.symbol} TOKEN</div>
+                            <div className="text-[12px] text-slate-500 font-mono mt-1">
+                              {token.trustStatus === 'verified'
+                                ? formatUsd((Number(token.balance || '0') || 0) * (token.price ?? 0))
+                                : '--'}
+                            </div>
                          </div>
                       </div>
                     </div>
@@ -445,6 +546,12 @@ export default function Dashboard({
                                </button>
                             )}
                          </div>
+                      </div>
+                      <div className="mt-3 text-[9px] uppercase tracking-wider font-bold">
+                        {token.trustStatus === 'verified' && <span className="text-brand-cyan">Verified</span>}
+                        {token.trustStatus === 'unverified' && <span className="text-amber-400">Unverified</span>}
+                        {token.trustStatus === 'insufficientLiquidity' && <span className="text-amber-400">Low liquidity</span>}
+                        {token.trustStatus === 'noData' && <span className="text-muted">No market data</span>}
                       </div>
                     </div>
                   </div>
@@ -554,6 +661,9 @@ export default function Dashboard({
                               }`}>
                                 {act.status}
                               </span>
+                              {act.txStage && (
+                                <span className="text-[9px] uppercase tracking-wider text-muted">{act.txStage.replaceAll('-', ' ')}</span>
+                              )}
                               {act.hash && network.explorer && (
                                 <a
                                   href={`${network.explorer}/tx/${act.hash}`}
@@ -687,6 +797,12 @@ export default function Dashboard({
                       <span className="text-brand-cyan text-[10px] font-bold flex items-center gap-1 bg-brand-cyan/10 px-2 py-1">
                         <Lock className="w-3 h-3" /> Confidential
                       </span>
+                    </div>
+                  )}
+                  {selectedActivity.txStage && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted">Stage</span>
+                      <span className="text-main font-mono text-[10px]">{selectedActivity.txStage}</span>
                     </div>
                   )}
                   <div className="flex justify-between items-center gap-2">

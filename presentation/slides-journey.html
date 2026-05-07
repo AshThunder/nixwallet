@@ -11,13 +11,19 @@
         :root {
             --bg: #020617;
             --surface: #0f172a;
+            --surface-elevated: #1e293b;
             --border: rgba(255,255,255,0.08);
             --cyan: #22d3ee;
+            --cyan-active: #06b6d4;
             --cyan-dim: rgba(34,211,238,0.12);
             --cyan-glow: rgba(34,211,238,0.35);
             --white: #f8fafc;
             --sub: #94a3b8;
             --muted: #475569;
+            --radius-sm: 4px;
+            --radius-md: 6px;
+            --radius-lg: 8px;
+            --radius-xl: 12px;
             /* Readable when the deck shares the screen with the extension (~half width). */
             --journey-text-max: min(92vw, 44rem);
         }
@@ -57,14 +63,7 @@
             opacity: 0; transform: translateX(-60px);
         }
 
-        .glow {
-            position: fixed; z-index: 0;
-            width: 700px; height: 700px;
-            border-radius: 50%;
-            background: radial-gradient(circle, var(--cyan-glow) 0%, transparent 60%);
-            filter: blur(120px); opacity: 0.25;
-            pointer-events: none;
-        }
+        .glow { display: none; }
         .glow-1 { top: -200px; right: -200px; }
         .glow-2 { bottom: -200px; left: -200px; opacity: 0.15; }
 
@@ -76,14 +75,14 @@
         }
         .slide h1 {
             font-size: clamp(3rem, 11vw, 7.5rem);
-            font-weight: 900; letter-spacing: -0.05em;
-            text-transform: uppercase; line-height: 0.92;
+            font-weight: 700; letter-spacing: -0.04em;
+            text-transform: uppercase; line-height: 1;
             text-align: center;
         }
-        .slide h1 span { color: var(--cyan); text-shadow: 0 0 48px var(--cyan-glow); }
+        .slide h1 span { color: var(--cyan); }
         .slide h2 {
             font-size: clamp(2rem, 6.5vw, 4rem);
-            font-weight: 800; letter-spacing: -0.03em;
+            font-weight: 700; letter-spacing: -0.03em;
             line-height: 1.1; text-align: center;
             margin-bottom: clamp(1rem, 2vh, 1.75rem);
         }
@@ -124,16 +123,18 @@
         .link-row a {
             padding: clamp(0.85rem, 1.5vh, 1.1rem) clamp(1.25rem, 2.5vw, 1.75rem);
             font-size: clamp(0.85rem, 1.5vw, 1.05rem);
-            font-weight: 700;
+            font-weight: 600;
             text-transform: uppercase; letter-spacing: 0.08em;
-            text-decoration: none; transition: all 0.3s;
-            border: 1px solid var(--border); color: var(--sub);
+            text-decoration: none; transition: background-color 0.2s, border-color 0.2s, color 0.2s, transform 0.2s;
+            border: 1px solid var(--border); color: var(--white); background: var(--surface);
+            border-radius: var(--radius-md);
         }
-        .link-row a:hover { border-color: var(--cyan); color: var(--cyan); }
+        .link-row a:hover { border-color: var(--cyan); color: var(--cyan); background: var(--surface-elevated); }
         .link-row a.primary {
             background: var(--cyan); color: var(--bg); border-color: var(--cyan);
-            box-shadow: 0 0 15px var(--cyan-glow);
+            box-shadow: none;
         }
+        .link-row a.primary:hover { background: var(--cyan-active); border-color: var(--cyan-active); color: var(--bg); }
 
         .slide .built-by {
             font-size: clamp(1.4rem, 3.5vw, 2.5rem);
@@ -146,7 +147,6 @@
         }
         .slide .built-by span {
             color: var(--cyan);
-            text-shadow: 0 0 36px var(--cyan-glow);
         }
 
         #progress {
@@ -178,7 +178,7 @@
             z-index: 101;
             width: clamp(2.75rem, 5vw, 3.25rem);
             height: clamp(2.75rem, 5vw, 3.25rem);
-            border-radius: 50%;
+            border-radius: var(--radius-xl);
             border: 1px solid var(--border);
             background: rgba(15, 23, 42, 0.92);
             color: var(--cyan);
@@ -188,12 +188,12 @@
             justify-content: center;
             transition: background 0.2s, border-color 0.2s, opacity 0.2s, box-shadow 0.2s;
             padding: 0;
-            box-shadow: 0 4px 24px rgba(0,0,0,0.35);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
         }
         .slide-nav:hover:not(:disabled) {
             border-color: var(--cyan);
-            background: var(--cyan-dim);
-            box-shadow: 0 0 20px var(--cyan-glow);
+            background: var(--surface-elevated);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
         }
         .slide-nav:focus-visible {
             outline: 2px solid var(--cyan);

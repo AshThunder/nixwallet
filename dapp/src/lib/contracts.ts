@@ -1,9 +1,18 @@
 import { BrowserProvider, Contract, JsonRpcProvider, type ContractTransactionResponse, type Signer, ZeroAddress } from 'ethers';
 import { type DappNetwork } from '../config/networks';
+import { getNativeWrapperAddress, isNativeWrapperConfigured } from '../config/native';
+
+export { getNativeWrapperAddress, isNativeWrapperConfigured };
+
+export function alignToWrapperRate(amountWei: bigint, rate: bigint): bigint {
+  if (rate <= 0n) return amountWei;
+  return (amountWei / rate) * rate;
+}
 import { type EthereumProvider } from './nixProvider';
 
 export const WRAPPER_ABI = [
   'function shield(address to, uint256 amount) external returns (bytes32)',
+  'function shieldNative(address to) external payable returns (bytes32)',
   'function unshield(address from, address to, uint64 amount) external returns (bytes32)',
   'function claimUnshielded(bytes32 unshieldRequestId, uint64 unshieldAmountCleartext, bytes decryptionProof) external',
   'function claimUnshieldedBatch(bytes32[] unshieldRequestIds, uint64[] unshieldAmountCleartexts, bytes[] decryptionProofs) external',
@@ -51,8 +60,18 @@ export function getReadProvider(network: DappNetwork) {
   });
 }
 
-async function waitForTransaction(network: DappNetwork, tx: ContractTransactionResponse) {
-  return getReadProvider(network).waitForTransaction(tx.hash);
+async function waitForTransaction(network: DappNetwork, tx: ContractTransactionResponse, signer?: Signer) {
+  const provider = signer?.provider;
+  if (provider) {
+    const receipt = await provider.waitForTransaction(tx.hash, 1);
+    if (!receipt) throw new Error('Transaction was not confirmed.');
+    if (receipt.status !== 1) throw new Error('Transaction reverted on-chain.');
+    return receipt;
+  }
+  const receipt = await getReadProvider(network).waitForTransaction(tx.hash, 1);
+  if (!receipt) throw new Error('Transaction was not confirmed.');
+  if (receipt.status !== 1) throw new Error('Transaction reverted on-chain.');
+  return receipt;
 }
 
 export async function getInjectedSigner(provider: EthereumProvider): Promise<Signer> {
@@ -93,7 +112,7 @@ export async function getOrCreateWrapper(network: DappNetwork, signer: Signer, t
   const current = await registry.getWrapper(tokenAddress);
   if (current !== ZeroAddress) return current;
   const tx: ContractTransactionResponse = await registry.getOrCreateWrapper(tokenAddress);
-  await waitForTransaction(network, tx);
+  await waitForTransaction(network, tx, signer);
   const wrapper = await registry.getWrapper(tokenAddress);
   if (wrapper === ZeroAddress) throw new Error('Wrapper deployment failed');
   return wrapper;
@@ -112,25 +131,42 @@ export async function getAllowance(network: DappNetwork, tokenAddress: string, o
 export async function approveWrapper(network: DappNetwork, signer: Signer, tokenAddress: string, wrapperAddress: string, amount: bigint) {
   const token = new Contract(tokenAddress, ERC20_ABI, signer);
   const tx: ContractTransactionResponse = await token.approve(wrapperAddress, amount);
-  return waitForTransaction(network, tx);
+  return waitForTransaction(network, tx, signer);
 }
 
 export async function transferToken(network: DappNetwork, signer: Signer, tokenAddress: string, to: string, amount: bigint) {
   const token = new Contract(tokenAddress, ERC20_ABI, signer);
   const tx: ContractTransactionResponse = await token.transfer(to, amount);
-  return waitForTransaction(network, tx);
+  return waitForTransaction(network, tx, signer);
 }
 
 export async function shield(network: DappNetwork, signer: Signer, wrapperAddress: string, to: string, amount: bigint) {
   const wrapper = new Contract(wrapperAddress, WRAPPER_ABI, signer);
   const tx: ContractTransactionResponse = await wrapper.shield(to, amount);
-  return waitForTransaction(network, tx);
+  return waitForTransaction(network, tx, signer);
+}
+
+export async function shieldNative(network: DappNetwork, signer: Signer, to: string, amountWei: bigint) {
+  const wrapperAddress = getNativeWrapperAddress(network.id);
+  if (!isNativeWrapperConfigured(network.id)) {
+    throw new Error('Native ETH wrapper not deployed on this network.');
+  }
+  const wrapper = new Contract(wrapperAddress, WRAPPER_ABI, signer);
+  const rate = await wrapper.rate() as bigint;
+  const aligned = alignToWrapperRate(amountWei, rate);
+  if (aligned === 0n) throw new Error('Amount too small after rate alignment.');
+  const tx: ContractTransactionResponse = await wrapper.shieldNative(to, { value: aligned });
+  return waitForTransaction(network, tx, signer);
+}
+
+export async function getNativePublicBalance(network: DappNetwork, account: string): Promise<bigint> {
+  return getReadProvider(network).getBalance(account);
 }
 
 export async function requestUnshield(network: DappNetwork, signer: Signer, wrapperAddress: string, from: string, to: string, amount: bigint) {
   const wrapper = new Contract(wrapperAddress, WRAPPER_ABI, signer);
   const tx: ContractTransactionResponse = await wrapper.unshield(from, to, amount);
-  return waitForTransaction(network, tx);
+  return waitForTransaction(network, tx, signer);
 }
 
 export async function claimUnshielded(
@@ -143,7 +179,7 @@ export async function claimUnshielded(
 ) {
   const wrapper = new Contract(wrapperAddress, WRAPPER_ABI, signer);
   const tx: ContractTransactionResponse = await wrapper.claimUnshielded(requestId, decryptedValue, signature);
-  return waitForTransaction(network, tx);
+  return waitForTransaction(network, tx, signer);
 }
 
 export async function claimUnshieldedBatch(
@@ -156,7 +192,7 @@ export async function claimUnshieldedBatch(
 ) {
   const wrapper = new Contract(wrapperAddress, WRAPPER_ABI, signer);
   const tx: ContractTransactionResponse = await wrapper.claimUnshieldedBatch(requestIds, decryptedValues, signatures);
-  return waitForTransaction(network, tx);
+  return waitForTransaction(network, tx, signer);
 }
 
 export interface EncryptedAmountInput {
@@ -175,7 +211,7 @@ export async function confidentialTransfer(
 ) {
   const wrapper = new Contract(wrapperAddress, WRAPPER_ABI, signer);
   const tx: ContractTransactionResponse = await wrapper.confidentialTransfer(to, encryptedAmount);
-  return waitForTransaction(network, tx);
+  return waitForTransaction(network, tx, signer);
 }
 
 export async function getEncryptedBalance(network: DappNetwork, wrapperAddress: string, account: string): Promise<string> {

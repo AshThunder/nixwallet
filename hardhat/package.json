@@ -5,6 +5,9 @@
   "scripts": {
     "compile": "hardhat compile",
     "deploy": "hardhat deploy --network sepolia --tags FHERC20",
+    "deploy:native": "hardhat deploy --network sepolia --tags NativeWrapper",
+    "deploy:native:base": "hardhat deploy --network baseSepolia --tags NativeWrapper",
+    "deploy:native:arb": "hardhat deploy --network arbitrumSepolia --tags NativeWrapper",
     "clean": "rimraf ./artifacts ./cache ./coverage ./types ./coverage.json"
   },
   "repository": {

@@ -43,6 +43,21 @@ async function setStorageData(key: string, value: unknown) {
   }
 }
 
+function notifyTransactionSuccess(activity: Activity) {
+  if (activity.status !== 'success' || !activity.hash || typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
+    return;
+  }
+  const label = activity.tokenSymbol ? `${activity.type} ${activity.tokenSymbol}` : activity.type;
+  chrome.runtime.sendMessage({
+    type: 'TRANSACTION_SUCCESS_NOTIFICATION',
+    payload: {
+      title: 'Transaction successful',
+      message: `${label.replace(/-/g, ' ')} confirmed on-chain.`,
+      hash: activity.hash,
+    },
+  }).catch(() => {});
+}
+
 /** Add a new activity to the local history */
 export async function addActivity(activity: Omit<Activity, 'timestamp'>) {
   const newActivity: Activity = {
@@ -54,24 +69,37 @@ export async function addActivity(activity: Omit<Activity, 'timestamp'>) {
   const history = Array.isArray(stored) ? stored as Activity[] : [];
 
   const index = history.findIndex(a => a.id === activity.id);
+  let saved: Activity;
   if (index !== -1) {
-    history[index] = newActivity;
+    const existing = history[index];
+    saved = {
+      ...existing,
+      ...newActivity,
+      timestamp: existing.timestamp,
+    };
+    history[index] = saved;
   } else {
-    history.unshift(newActivity);
+    saved = newActivity;
+    history.unshift(saved);
   }
 
   await setStorageData(STORAGE_KEY, history.slice(0, 50));
+  notifyTransactionSuccess(saved);
+}
 
-  if (activity.status === 'success' && activity.hash && typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
-    const label = activity.tokenSymbol ? `${activity.type} ${activity.tokenSymbol}` : activity.type;
-    chrome.runtime.sendMessage({
-      type: 'TRANSACTION_SUCCESS_NOTIFICATION',
-      payload: {
-        title: 'Transaction successful',
-        message: `${label.replace(/-/g, ' ')} confirmed.`,
-        hash: activity.hash,
-      },
-    }).catch(() => {});
+/** Patch an existing activity entry by transaction id/hash */
+export async function patchActivity(id: string, patch: Partial<Activity>) {
+  const stored = await getStorageData(STORAGE_KEY);
+  const history = Array.isArray(stored) ? stored as Activity[] : [];
+  const index = history.findIndex((entry) => entry.id === id);
+  if (index === -1) return;
+
+  const previousStatus = history[index].status;
+  history[index] = { ...history[index], ...patch };
+  await setStorageData(STORAGE_KEY, history);
+
+  if (previousStatus !== 'success' && history[index].status === 'success') {
+    notifyTransactionSuccess(history[index]);
   }
 }
 

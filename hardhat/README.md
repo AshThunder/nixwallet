@@ -36,6 +36,31 @@ Extends Fhenix's `FHERC20ERC20Wrapper` to provide confidential token functionali
 - `confidentialTransfer(to, encryptedAmount)` — Transfer encrypted tokens
 - `confidentialBalanceOf(account)` — Get encrypted balance handle
 
+### FHERC20NativeUnderlyingWrapper
+
+**Location:** `contracts/fherc20/FHERC20NativeUnderlyingWrapper.sol`
+
+Extends Fhenix's [`FHERC20NativeWrapper`](https://cofhe-docs.fhenix.zone/fhe-library/confidential-contracts/fherc20/fherc20-wrapper) for **native ETH** (and WETH via `shieldWrappedNative`). Deploy **once per network** — not via the registry.
+
+- `shieldNative(to)` — Payable; shields `msg.value` ETH into cETH
+- `shieldWrappedNative(to, value)` — Shield WETH (approve first)
+- `unshield` / `claimUnshielded` / `claimUnshieldedBatch` — Same flow as ERC-20 wrappers; claim pays out **native ETH**
+
+```bash
+npm run deploy:native
+# or: npx hardhat deploy --tags NativeWrapper --network sepolia
+```
+
+**Deployed:**
+
+| Network | Address |
+|---------|---------|
+| Sepolia | `0x55Ee31F5706D91e0E48C48B5dBc6e14aD7afA3d2` |
+| Base Sepolia | `0xCC5935e2D653a8e32151e8cB342795485BEbdF50` |
+| Arbitrum Sepolia | `0x9323c32a9759A5F5dF4340e8309Fb639da8c5a29` |
+
+Paste into `extension/src/lib/nativeToken.ts` or `VITE_NATIVE_WRAPPER_*` env vars. See `extension/NATIVE_WRAP.md`.
+
 ### Decimal Normalization
 
 Wrappers normalize token decimals to fit within `euint64`. The maximum confidential decimals default to 6:

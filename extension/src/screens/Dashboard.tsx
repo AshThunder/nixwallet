@@ -3,11 +3,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Shield, ArrowRightLeft, ArrowUpRight, ArrowDownRight,
   Lock, Copy, Check, Settings, LogOut, RefreshCw, Eye, Loader2, X, ExternalLink, ChevronDown, Plus, AlertCircle,
-  DollarSign
 } from 'lucide-react';
-import { shortenAddress, formatBalance, getProvider, FHENIX_NETWORKS } from '../lib/wallet';
+import TokenIcon from '../components/TokenIcon';
+import TestnetFaucetLink from '../components/TestnetFaucetLink';
+import { getNativeEthFaucetUrl, getStablecoinFaucetUrl } from '../lib/testnetFaucets';
+import { mergePrivateBalancesOnFetch, resetPrivateBalanceState } from '../lib/privateBalanceState';
+import { shortenAddress, formatBalance, formatUnitsDisplay, getProvider, FHENIX_NETWORKS } from '../lib/wallet';
 import type { NetworkId } from '../lib/wallet';
-import { getWrapperAddress } from '../lib/contracts';
+import { getWrapperAddress, isNativeWrapperConfigured, NATIVE_TOKEN_METADATA } from '../lib/contracts';
 import { initCofheClient, decryptForView, FheTypes } from '../lib/cofhe';
 import { getActivities, type Activity } from '../lib/activity';
 import { ensureDefaults, type TokenMetadata } from '../lib/tokens';
@@ -26,7 +29,7 @@ interface Props {
   network: { id: string; name: string; symbol: string; chainId: number; explorer: string; [k: string]: unknown };
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
-  onNavigate: (screen: string, tokenData?: { symbol: string; address: string; decimals?: number }) => void;
+  onNavigate: (screen: string, tokenData?: { symbol: string; address: string; decimals?: number; sendMode?: 'public' | 'private' }) => void;
   onAccountChange?: (arg: number | string) => void;
   onImportAccount?: (acc: { address: string; privateKey: string; name?: string }, password: string) => Promise<boolean>;
   onNetworkChange?: (id: NetworkId) => void;
@@ -52,6 +55,8 @@ export default function Dashboard({
 }: Props) {
   const [activeTab, setActiveTab] = useState<'tokens' | 'activity' | 'discover'>('tokens');
   const [ethBalance, setEthBalance] = useState('0.0000');
+  const [ethPrivateBalance, setEthPrivateBalance] = useState<string | null>('***');
+  const [decryptingEth, setDecryptingEth] = useState(false);
   const [customTokenBalances, setCustomTokenBalances] = useState<Record<string, string>>({});
   const [customPrivateBalances, setCustomPrivateBalances] = useState<Record<string, string | null>>({});
   const [decryptingTokens, setDecryptingTokens] = useState<Record<string, boolean>>({});
@@ -70,52 +75,54 @@ export default function Dashboard({
   const [pricesLastUpdated, setPricesLastUpdated] = useState<number | null>(null);
   const [pricesStale, setPricesStale] = useState(false);
   const networkPickerRef = useRef<HTMLDivElement | null>(null);
+  const activeAddressRef = useRef(address);
+  activeAddressRef.current = address;
 
   const key = `custom_tokens_${network.id}`;
   const [customMetadata, setCustomMetadata] = useState<TokenMetadata[]>([]);
 
   const fetchBalances = useCallback(async () => {
+    const walletAddress = address;
     setRefreshing(true);
     setFetchError(null);
     try {
       const provider = getProvider();
-      const balance = await provider.getBalance(address);
-      setEthBalance(formatBalance(balance));
+      const balance = await provider.getBalance(walletAddress);
 
-      const history = await getActivities(network.id, address);
-      setActivities(history);
+      const history = await getActivities(network.id, walletAddress);
 
       const accRes = await chrome.storage.local.get(['accountCount']);
       const count = accRes.accountCount !== undefined ? Number(accRes.accountCount) : 1;
-      setAccountCount(Math.max(count, (accountIndex || 0) + 1));
 
       const customs = await ensureDefaults(network.id);
-      setCustomMetadata(customs);
 
       const customResults: Record<string, string> = {};
 
       await Promise.all(customs.map(async (t) => {
         try {
           const contract = new ethers.Contract(t.address, ['function balanceOf(address) view returns (uint256)'], provider);
-          const bal = await contract.balanceOf(address);
-          customResults[t.address] = ethers.formatUnits(bal, t.decimals);
+          const bal = await contract.balanceOf(walletAddress);
+          customResults[t.address] = formatUnitsDisplay(bal, t.decimals);
         } catch {
           customResults[t.address] = '0.0000';
         }
       }));
-      setCustomTokenBalances(customResults);
-      setCustomPrivateBalances(prev => {
-        const updated: Record<string, string | null> = { ...prev };
-        for (const t of customs) {
-          if (!(t.address in updated)) updated[t.address] = '***';
-        }
-        return updated;
-      });
 
       const [nativePrice, prices] = await Promise.all([
         getNativeEthPrice(network.id),
         getUsdPrices(network.id, customs),
       ]);
+
+      if (activeAddressRef.current !== walletAddress) return;
+
+      setEthBalance(formatBalance(balance));
+      setActivities(history);
+      setAccountCount(Math.max(count, (accountIndex || 0) + 1));
+      setCustomMetadata(customs);
+      setCustomTokenBalances(customResults);
+      setCustomPrivateBalances((prev) =>
+        mergePrivateBalancesOnFetch(prev, customs.map((t) => t.address)),
+      );
       setEthUsdPrice(nativePrice.usd);
       setTokenPrices(prices);
       const latest = Math.max(
@@ -134,6 +141,40 @@ export default function Dashboard({
     }
     setRefreshing(false);
   }, [address, network.id, accountIndex]);
+
+  const handleRevealNativeEth = async (e?: { stopPropagation: () => void }) => {
+    e?.stopPropagation();
+    if (!isNativeWrapperConfigured(network.id as NetworkId)) return;
+    setDecryptingEth(true);
+    try {
+      await initCofheClient(_pk);
+      const provider = getProvider();
+      const signer = new ethers.Wallet(_pk, provider);
+      const wrapperAddr = await getWrapperAddress(provider, NATIVE_TOKEN_METADATA.address);
+      if (!wrapperAddr) {
+        setEthPrivateBalance('0.0000');
+        return;
+      }
+      const wrapper = new ethers.Contract(
+        wrapperAddr,
+        ['function confidentialBalanceOf(address) external view returns (bytes32)'],
+        signer,
+      );
+      const ctHash: string = await wrapper.confidentialBalanceOf(address);
+      if (activeAddressRef.current !== address) return;
+      if (ctHash === '0x' + '0'.repeat(64)) {
+        setEthPrivateBalance('0.0000');
+      } else {
+        const decrypted = await decryptForView(ctHash, network.chainId, address, FheTypes.Uint64);
+        if (activeAddressRef.current !== address) return;
+        setEthPrivateBalance(ethers.formatUnits(decrypted, 6));
+      }
+    } catch {
+      /* reveal errors are non-critical */
+    } finally {
+      setDecryptingEth(false);
+    }
+  };
 
   const handleRevealToken = async (tokenAddress: string) => {
     setDecryptingTokens(prev => ({ ...prev, [tokenAddress]: true }));
@@ -155,17 +196,27 @@ export default function Dashboard({
       );
       
       const ctHash: string = await wrapper.confidentialBalanceOf(address);
-      
+
+      if (activeAddressRef.current !== address) return;
       if (ctHash === '0x' + '0'.repeat(64)) {
         setCustomPrivateBalances(prev => ({ ...prev, [tokenAddress]: '0.0000' }));
       } else {
         const decrypted = await decryptForView(ctHash, network.chainId, address, FheTypes.Uint64);
-        setCustomPrivateBalances(prev => ({ ...prev, [tokenAddress]: ethers.formatUnits(decrypted, 6) }));
+        if (activeAddressRef.current !== address) return;
+        setCustomPrivateBalances(prev => ({ ...prev, [tokenAddress]: formatUnitsDisplay(decrypted, 6) }));
       }
     } catch { /* reveal errors are non-critical */ } finally {
       setDecryptingTokens(prev => ({ ...prev, [tokenAddress]: false }));
     }
   };
+
+  useEffect(() => {
+    const reset = resetPrivateBalanceState();
+    setEthPrivateBalance(reset.ethPrivateBalance);
+    setCustomPrivateBalances(reset.customPrivateBalances);
+    setDecryptingEth(false);
+    setDecryptingTokens({});
+  }, [address]);
 
   useEffect(() => {
     fetchBalances();
@@ -201,7 +252,8 @@ export default function Dashboard({
     });
   }, [key, showAccountPicker]);
 
-  const priority = ['USDT', 'USDC'];
+  const priority = ['USDC', 'USDT'];
+  const ethFaucetUrl = getNativeEthFaucetUrl(network.id as NetworkId);
 
   const formatUsd = (value: number | null): string => {
     if (typeof value !== 'number' || !Number.isFinite(value)) return '--';
@@ -217,20 +269,13 @@ export default function Dashboard({
     if (aIdx !== -1) return -1;
     if (bIdx !== -1) return 1;
     return 0;
-  }).map(t => {
-      let iconNode: React.ReactNode = t.symbol[0];
-      if (t.symbol === 'USDT') iconNode = <DollarSign className="w-5 h-5 text-emerald-500" />;
-      if (t.symbol === 'USDC') iconNode = <DollarSign className="w-5 h-5 text-blue-500" />;
-
-      return {
-        ...t,
-        balance: customTokenBalances[t.address] || '0.0000',
-        privateBalance: customPrivateBalances[t.address] || '***',
-        price: tokenPrices[t.address.toLowerCase()]?.usd ?? null,
-        trustStatus: tokenPrices[t.address.toLowerCase()]?.trustStatus ?? 'noData',
-        icon: iconNode
-      };
-  });
+  }).map(t => ({
+      ...t,
+      balance: customTokenBalances[t.address] || '0.0000',
+      privateBalance: customPrivateBalances[t.address] || '***',
+      price: tokenPrices[t.address.toLowerCase()]?.usd ?? null,
+      trustStatus: tokenPrices[t.address.toLowerCase()]?.trustStatus ?? 'noData',
+  }));
 
   useEffect(() => {
     if (!showNetworkPicker) return;
@@ -258,7 +303,7 @@ export default function Dashboard({
   }, [showNetworkPicker]);
 
   return (
-    <div className="w-full min-h-screen overflow-hidden bg-app text-main font-brand relative flex flex-col">
+    <div className="ui-density-comfortable w-full min-h-screen overflow-hidden bg-app text-main font-brand relative flex flex-col">
       {/* BG Decorators */}
       <div className="absolute top-[-100px] left-[-100px] w-64 h-64 bg-brand-cyan/20 rounded-full mix-blend-screen filter blur-[80px]" />
       <div className="absolute bottom-[-100px] right-[-100px] w-64 h-64 bg-brand-navy/60 rounded-full mix-blend-screen filter blur-[80px]" />
@@ -409,8 +454,8 @@ export default function Dashboard({
               className="mb-4 bg-red-500/10 border border-red-500/20 p-3 flex items-center gap-3"
             >
               <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
-              <span className="text-[10px] text-red-400 flex-1 font-mono">{fetchError}</span>
-              <button onClick={fetchBalances} className="text-[9px] font-bold text-red-400 hover:text-red-300 uppercase tracking-wider shrink-0">
+              <span className="text-caption text-red-400 flex-1 font-mono">{fetchError}</span>
+              <button onClick={fetchBalances} className="text-micro font-bold text-red-400 hover:text-red-300 uppercase tracking-wider shrink-0">
                 Retry
               </button>
               <button onClick={() => setFetchError(null)} className="text-red-400 hover:text-red-300 shrink-0">
@@ -446,26 +491,65 @@ export default function Dashboard({
               exit={{ opacity: 0 }}
               className="space-y-3"
             >
-              {/* Native ETH Token View */}
+              {/* Native ETH — same split layout as wrapped tokens */}
               <div className={`flex flex-col border-l-2 transition-all ${
                 expandedToken === 'ETH' ? 'border-brand-cyan bg-surface' : 'border-transparent bg-surface/50'
               }`}>
                 <div
                   onClick={() => setExpandedToken(expandedToken === 'ETH' ? null : 'ETH')}
-                  className="flex items-center justify-between p-4 border border-ui hover:bg-brand-cyan/[0.02] transition-colors cursor-pointer"
+                  className="flex border-2 border-ui divide-x divide-ui hover:bg-brand-cyan/[0.02] transition-colors group cursor-pointer"
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 flex items-center justify-center text-sm font-bold border border-white/10 text-slate-300 bg-surface">
-                      Ξ
+                  <div className="flex-1 p-4 relative overflow-hidden bg-app">
+                    <div className="absolute top-2 right-2 opacity-[0.03] pointer-events-none scale-150 origin-top-right">
+                      <div className="w-16 h-16 rounded-full border-[6px] border-current flex items-center justify-center font-bold text-3xl">Ξ</div>
                     </div>
-                    <div>
-                      <div className="font-brand font-bold text-sm tracking-tight">{network.symbol}</div>
-                      <div className="text-label-caps text-slate-500">{network.name}</div>
+                    <div className="text-caption font-bold tracking-widest text-main mb-4 uppercase font-brand">PUBLIC BALANCE</div>
+                    <div className="flex items-center gap-3">
+                      <TokenIcon symbol={network.symbol} />
+                      <div className="min-w-0">
+                        <div className="font-brand font-bold text-2xl leading-none mb-1 text-main truncate">{ethBalance}</div>
+                        <div className="text-micro font-mono text-muted uppercase tracking-widest leading-none truncate">{network.symbol} · {network.name}</div>
+                        <div className="text-caption text-muted font-mono mt-1">{formatUsd(Number(ethBalance || '0') * (ethUsdPrice ?? 0))}</div>
+                        {ethFaucetUrl && (
+                          <TestnetFaucetLink href={ethFaucetUrl} label="ETH Faucet" />
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="font-brand font-bold text-sm tracking-tight">{ethBalance}</div>
-                    <div className="text-[12px] text-slate-600 font-mono">{formatUsd(Number(ethBalance || '0') * (ethUsdPrice ?? 0))}</div>
+
+                  <div className="flex-1 p-4 bg-brand-cyan/10 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-1 opacity-[0.05] pointer-events-none text-brand-cyan">
+                      <Shield className="w-16 h-16" />
+                    </div>
+                    <div className="text-caption font-bold tracking-widest text-main mb-4 uppercase font-brand">PRIVATE_BALANCE</div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 flex items-center justify-center border-2 border-brand-cyan/55 text-brand-cyan font-bold shadow-none bg-transparent shrink-0">
+                        <Lock className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        {!isNativeWrapperConfigured(network.id as NetworkId) ? (
+                          <div className="text-caption text-muted leading-relaxed">Wrap ETH to enable cETH</div>
+                        ) : ethPrivateBalance !== '***' ? (
+                          <>
+                            <div className="font-brand font-bold text-2xl leading-none mb-1 text-main truncate">{ethPrivateBalance === '0.0000' ? '0.00' : ethPrivateBalance}</div>
+                            <div className="text-micro font-mono text-muted uppercase tracking-widest truncate">C_{network.symbol} TOKEN</div>
+                          </>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); handleRevealNativeEth(); }}
+                            disabled={decryptingEth}
+                            className="text-micro font-bold text-brand-cyan hover:text-brand-cyan/80 transition-colors uppercase tracking-widest flex items-center gap-2"
+                          >
+                            {decryptingEth ? <Loader2 className="w-3 h-3 animate-spin shrink-0" /> : <Eye className="w-3 h-3 shrink-0" />}
+                            {decryptingEth ? 'DECRYPTING...' : <span className="text-left leading-tight">REVEAL<br />BALANCE</span>}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    {isNativeWrapperConfigured(network.id as NetworkId) && (
+                      <div className="mt-3 text-micro uppercase tracking-wider font-bold text-brand-cyan">Native wrapper</div>
+                    )}
                   </div>
                 </div>
 
@@ -475,13 +559,32 @@ export default function Dashboard({
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: 'auto', opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
-                      className="px-4 pb-4 pt-2 flex gap-2 border-x border-b border-ui"
+                      className="px-4 pb-4 pt-2 flex flex-col gap-2 border-x border-b border-ui"
                     >
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => onNavigate('send', { symbol: network.symbol, address: 'native', decimals: 18, sendMode: 'public' })}
+                          className="flex-1 py-3 bg-surface hover:bg-brand-cyan hover:text-brand-midnight text-label-caps transition-all flex items-center justify-center gap-2"
+                        >
+                          <ArrowUpRight className="w-4 h-4" /> Send
+                        </button>
+                        {isNativeWrapperConfigured(network.id as NetworkId) && (
+                          <button
+                            type="button"
+                            onClick={() => onNavigate('send', { symbol: network.symbol, address: 'native', decimals: 18, sendMode: 'private' })}
+                            className="flex-1 py-3 bg-brand-cyan/10 border border-brand-cyan/40 hover:bg-brand-cyan hover:text-brand-midnight text-label-caps transition-all flex items-center justify-center gap-2"
+                          >
+                            <Lock className="w-4 h-4" /> Private Send
+                          </button>
+                        )}
+                      </div>
                       <button
-                        onClick={() => onNavigate('send')}
-                        className="flex-1 py-3 bg-surface hover:bg-brand-cyan hover:text-brand-midnight text-label-caps transition-all flex items-center justify-center gap-2"
+                        type="button"
+                        onClick={() => onNavigate('wrap', { symbol: network.symbol, address: 'native', decimals: 18 })}
+                        className="w-full py-3 bg-surface hover:bg-brand-cyan hover:text-brand-midnight text-label-caps transition-all flex items-center justify-center gap-2"
                       >
-                        <ArrowUpRight className="w-4 h-4" /> Send
+                        <ArrowRightLeft className="w-4 h-4" /> Wrap / Unwrap
                       </button>
                     </motion.div>
                   )}
@@ -495,26 +598,30 @@ export default function Dashboard({
                 }`}>
                   <div
                     onClick={() => setExpandedToken(expandedToken === token.symbol ? null : token.symbol)}
-                    className="flex border border-ui divide-x divide-ui hover:bg-brand-cyan/[0.02] transition-colors group cursor-pointer"
+                    className="flex border-2 border-ui divide-x divide-ui hover:bg-brand-cyan/[0.02] transition-colors group cursor-pointer"
                   >
                     {/* Public Sector */}
                     <div className="flex-1 p-4 relative overflow-hidden bg-app">
                       <div className="absolute top-2 right-2 opacity-[0.03] pointer-events-none scale-150 origin-top-right">
                          <div className="w-16 h-16 rounded-full border-[6px] border-current flex items-center justify-center font-bold text-3xl">1</div>
                       </div>
-                      <div className="text-[10px] font-bold tracking-widest text-main mb-4 uppercase font-brand">PUBLIC BALANCE</div>
+                      <div className="text-caption font-bold tracking-widest text-main mb-4 uppercase font-brand">PUBLIC BALANCE</div>
                       <div className="flex items-center gap-3">
-                         <div className="w-10 h-10 flex items-center justify-center border border-ui text-main font-bold text-sm bg-app shrink-0">
-                            {token.icon}
-                         </div>
+                         <TokenIcon symbol={token.symbol} />
                          <div className="min-w-0">
                             <div className="font-brand font-bold text-2xl leading-none mb-1 text-main truncate">{token.balance === '0.0000' ? '0.00' : token.balance}</div>
-                            <div className="text-[9px] font-mono text-muted uppercase tracking-widest leading-none truncate">{token.symbol} TOKEN</div>
+                            <div className="text-micro font-mono text-muted uppercase tracking-widest leading-none truncate">{token.symbol} TOKEN</div>
                             <div className="text-[12px] text-slate-500 font-mono mt-1">
                               {token.trustStatus === 'verified'
                                 ? formatUsd((Number(token.balance || '0') || 0) * (token.price ?? 0))
                                 : '--'}
                             </div>
+                            {(() => {
+                              const faucetUrl = getStablecoinFaucetUrl(network.id as NetworkId, token.symbol);
+                              return faucetUrl ? (
+                                <TestnetFaucetLink href={faucetUrl} label={`${token.symbol} Faucet`} />
+                              ) : null;
+                            })()}
                          </div>
                       </div>
                     </div>
@@ -524,22 +631,22 @@ export default function Dashboard({
                       <div className="absolute top-0 right-0 p-1 opacity-[0.05] pointer-events-none text-brand-cyan">
                          <Shield className="w-16 h-16" />
                       </div>
-                      <div className="text-[10px] font-bold tracking-widest text-main mb-4 uppercase font-brand">PRIVATE_BALANCE</div>
+                      <div className="text-caption font-bold tracking-widest text-main mb-4 uppercase font-brand">PRIVATE_BALANCE</div>
                       <div className="flex items-center gap-3">
-                         <div className="w-10 h-10 flex items-center justify-center border border-brand-cyan/40 text-brand-cyan font-bold shadow-none bg-transparent shrink-0">
+                         <div className="w-10 h-10 flex items-center justify-center border-2 border-brand-cyan/55 text-brand-cyan font-bold shadow-none bg-transparent shrink-0">
                             <Lock className="w-4 h-4" />
                          </div>
                          <div className="flex-1 min-w-0">
                             {token.privateBalance !== '***' ? (
                                <>
                                   <div className="font-brand font-bold text-2xl leading-none mb-1 text-main truncate">{token.privateBalance === '0.0000' ? '0.00' : token.privateBalance}</div>
-                                  <div className="text-[9px] font-mono text-muted uppercase tracking-widest truncate">C_{token.symbol} TOKEN</div>
+                                  <div className="text-micro font-mono text-muted uppercase tracking-widest truncate">C_{token.symbol} TOKEN</div>
                                </>
                             ) : (
                                <button
                                  onClick={(e) => { e.stopPropagation(); handleRevealToken(token.address); }}
                                  disabled={decryptingTokens[token.address]}
-                                 className="text-[9px] font-bold text-brand-cyan hover:text-brand-cyan/80 transition-colors uppercase tracking-widest flex items-center gap-2"
+                                 className="text-micro font-bold text-brand-cyan hover:text-brand-cyan/80 transition-colors uppercase tracking-widest flex items-center gap-2"
                                >
                                   {decryptingTokens[token.address] ? <Loader2 className="w-3 h-3 animate-spin shrink-0"/> : <Eye className="w-3 h-3 shrink-0" />}
                                   {decryptingTokens[token.address] ? 'DECRYPTING...' : <span className="text-left leading-tight">REVEAL<br/>BALANCE</span>}
@@ -547,7 +654,7 @@ export default function Dashboard({
                             )}
                          </div>
                       </div>
-                      <div className="mt-3 text-[9px] uppercase tracking-wider font-bold">
+                      <div className="mt-3 text-micro uppercase tracking-wider font-bold">
                         {token.trustStatus === 'verified' && <span className="text-brand-cyan">Verified</span>}
                         {token.trustStatus === 'unverified' && <span className="text-amber-400">Unverified</span>}
                         {token.trustStatus === 'insufficientLiquidity' && <span className="text-amber-400">Low liquidity</span>}
@@ -624,7 +731,7 @@ export default function Dashboard({
                       <div 
                         key={act.id} 
                         onClick={() => setSelectedActivity(act)}
-                        className="flex items-center gap-3 p-3 bg-surface border border-ui hover:bg-input-field cursor-pointer transition-colors group"
+                        className="flex items-center gap-3 p-3 bg-surface border-2 border-ui hover:bg-input-field cursor-pointer transition-colors group"
                       >
                         <div className={`w-9 h-9 flex items-center justify-center transition-transform group-hover:scale-105 ${
                           act.type === 'send' ? 'bg-brand-cyan/10 text-brand-cyan' :
@@ -649,20 +756,20 @@ export default function Dashboard({
                           </div>
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                              <span className="text-[10px] text-sub">{timeStr}</span>
+                              <span className="text-caption text-sub">{timeStr}</span>
                               {act.recipient && (act.type === 'send' || act.type === 'confidential-transfer') && (
-                                <span className="text-[9px] font-mono text-muted">→ {shortenAddress(act.recipient)}</span>
+                                <span className="text-micro font-mono text-muted">→ {shortenAddress(act.recipient)}</span>
                               )}
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className={`text-[10px] font-bold uppercase tracking-tighter ${
+                              <span className={`text-caption font-bold uppercase tracking-tighter ${
                                 act.status === 'pending' ? 'text-amber-500/80' : 
                                 act.status === 'success' ? 'text-brand-cyan' : 'text-red-500/80'
                               }`}>
-                                {act.status}
+                                {act.status === 'pending' ? 'confirming' : act.status}
                               </span>
                               {act.txStage && (
-                                <span className="text-[9px] uppercase tracking-wider text-muted">{act.txStage.replaceAll('-', ' ')}</span>
+                                <span className="text-micro uppercase tracking-wider text-muted">{act.txStage.replaceAll('-', ' ')}</span>
                               )}
                               {act.hash && network.explorer && (
                                 <a
@@ -762,8 +869,8 @@ export default function Dashboard({
                 <div className="space-y-6 mb-10">
                   <div>
                     <div className="text-label-caps text-muted mb-2">Addresses</div>
-                    <div className="bg-surface p-4 font-mono text-[10px] text-sub space-y-2 border border-ui">
-                      <div className="flex justify-between border-b border-ui pb-2">
+                    <div className="bg-surface p-4 font-mono text-caption text-sub space-y-2 border-2 border-ui">
+                      <div className="flex justify-between border-b-2 border-ui pb-2">
                         <span>FROM</span>
                         <span className="text-main">{shortenAddress(address)}</span>
                       </div>
@@ -777,14 +884,14 @@ export default function Dashboard({
                   </div>
                 </div>
 
-                <div className="space-y-4 pt-6 border-t border-ui uppercase tracking-widest text-label-caps">
+                <div className="space-y-4 pt-6 border-t-2 border-ui uppercase tracking-widest text-label-caps">
                    <div className="flex justify-between items-center">
                     <span className="text-muted">Amount</span>
                     <span className="text-brand-cyan font-bold text-sm bg-brand-cyan/10 px-2 py-1">{selectedActivity.amount}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-muted">Date</span>
-                    <span className="text-main font-mono text-[10px]">
+                    <span className="text-main font-mono text-caption">
                       {new Date(selectedActivity.timestamp).toLocaleString(undefined, {
                         year: 'numeric', month: 'short', day: 'numeric',
                         hour: '2-digit', minute: '2-digit',
@@ -794,7 +901,7 @@ export default function Dashboard({
                   {selectedActivity.isConfidential && (
                     <div className="flex justify-between items-center">
                       <span className="text-muted">Type</span>
-                      <span className="text-brand-cyan text-[10px] font-bold flex items-center gap-1 bg-brand-cyan/10 px-2 py-1">
+                      <span className="text-brand-cyan text-caption font-bold flex items-center gap-1 bg-brand-cyan/10 px-2 py-1">
                         <Lock className="w-3 h-3" /> Confidential
                       </span>
                     </div>
@@ -802,7 +909,7 @@ export default function Dashboard({
                   {selectedActivity.txStage && (
                     <div className="flex justify-between items-center">
                       <span className="text-muted">Stage</span>
-                      <span className="text-main font-mono text-[10px]">{selectedActivity.txStage}</span>
+                      <span className="text-main font-mono text-caption">{selectedActivity.txStage}</span>
                     </div>
                   )}
                   <div className="flex justify-between items-center gap-2">
@@ -812,13 +919,13 @@ export default function Dashboard({
                         href={`${network.explorer}/tx/${selectedActivity.hash}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-main font-mono text-[10px] hover:text-brand-cyan flex items-center gap-1 min-w-0 justify-end"
+                        className="text-main font-mono text-caption hover:text-brand-cyan flex items-center gap-1 min-w-0 justify-end"
                       >
                         <span className="truncate">{selectedActivity.hash.slice(0, 10)}…{selectedActivity.hash.slice(-8)}</span>
                         <ExternalLink className="w-3 h-3 shrink-0 text-brand-cyan" />
                       </a>
                     ) : (
-                      <span className="text-main font-mono text-[10px]">#{selectedActivity.id.slice(0, 8)}</span>
+                      <span className="text-main font-mono text-caption">#{selectedActivity.id.slice(0, 8)}</span>
                     )}
                   </div>
                 </div>
@@ -873,22 +980,20 @@ export default function Dashboard({
               </div>
 
               <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-3">
-                {/* ETH (Only for Send) */}
-                {showTokenPicker.action === 'send' && (
+                {/* Native ETH */}
+                {(showTokenPicker.action === 'send' || showTokenPicker.action === 'wrap') && (
                   <button
                     onClick={() => {
-                      onNavigate('send', { symbol: network.symbol, address: ethers.ZeroAddress, decimals: 18 });
-                      setShowTokenPicker({ open: false, action: 'send' });
+                      onNavigate(showTokenPicker.action, { symbol: network.symbol, address: 'native', decimals: 18 });
+                      setShowTokenPicker({ open: false, action: showTokenPicker.action });
                     }}
                     className="w-full p-4 bg-surface border border-ui hover:border-brand-cyan transition-all flex items-center justify-between group"
                   >
                     <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 flex items-center justify-center border border-ui bg-app text-brand-cyan font-bold tracking-tighter group-hover:bg-brand-cyan group-hover:text-brand-midnight transition-all">
-                        E
-                      </div>
+                      <TokenIcon symbol={network.symbol} className="w-10 h-10 shrink-0 border border-ui bg-app overflow-hidden group-hover:border-brand-cyan transition-colors" />
                       <div className="text-left">
                         <div className="font-brand font-bold text-sm tracking-tight">{network.symbol}</div>
-                        <div className="text-[10px] text-muted uppercase tracking-widest">Native Asset</div>
+                        <div className="text-caption text-muted uppercase tracking-widest">Native Asset</div>
                       </div>
                     </div>
                     <div className="text-right">
@@ -912,18 +1017,16 @@ export default function Dashboard({
                     className="w-full p-4 bg-surface border border-ui hover:border-brand-cyan transition-all flex items-center justify-between group"
                   >
                     <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 flex items-center justify-center border border-ui bg-app text-brand-cyan font-bold tracking-tighter group-hover:bg-brand-cyan group-hover:text-brand-midnight transition-all">
-                        {token.icon}
-                      </div>
+                      <TokenIcon symbol={token.symbol} className="w-10 h-10 shrink-0 border border-ui bg-app overflow-hidden group-hover:border-brand-cyan transition-colors" />
                       <div className="text-left">
                         <div className="font-brand font-bold text-sm tracking-tight">{token.symbol}</div>
-                        <div className="text-[10px] text-muted uppercase tracking-widest">{token.name}</div>
+                        <div className="text-caption text-muted uppercase tracking-widest">{token.name}</div>
                       </div>
                     </div>
                     <div className="text-right">
                       <div className="font-brand font-bold text-sm">{token.balance}</div>
                       {showTokenPicker.action === 'wrap' && (
-                        <div className="text-[9px] font-bold uppercase tracking-widest text-brand-cyan">
+                        <div className="text-micro font-bold uppercase tracking-widest text-brand-cyan">
                           FHERC20
                         </div>
                       )}

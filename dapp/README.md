@@ -1,6 +1,8 @@
 # NixWallet Companion DApp
 
-This is an external dApp for testing public ERC-20 and confidential FHERC20 flows with NixWallet as the only signer.
+**Hosted:** [https://nixwalletdapp.vercel.app](https://nixwalletdapp.vercel.app)
+
+This is an external dApp for testing public ERC-20, native ETH → cETH, and confidential FHERC20 flows with NixWallet as the only signer.
 
 The dApp does not hold private keys and does not render trusted transaction approval UX. It initiates provider requests, then NixWallet shows the in-wallet confirmation modal.
 
@@ -23,6 +25,7 @@ The registry addresses are also built into the dApp as fallbacks so local testin
 - Connect account with `eth_requestAccounts`.
 - Show the detected wallet, connected account, active network, and chain ID in the wallet panel.
 - Switch between Sepolia, Base Sepolia, and Arbitrum Sepolia.
+- **Native ETH → cETH** on Sepolia, Base Sepolia, and Arbitrum Sepolia via `shieldNative` (pre-deployed wrapper addresses in `src/config/native.ts`).
 - Select default Sepolia stablecoins that mirror the extension defaults:
   - USDT: `0xaA8E23Fb1079EA71e0a56F48a2aA51851D8433D0`
   - USDC: `0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238`
@@ -66,11 +69,10 @@ Approval requires NixWallet to be unlocked. If the wallet is locked, the request
 
 ## Activity tracking
 
-Transactions submitted from this dApp are recorded in the NixWallet Activity tab after NixWallet sends them. Current external entries track the submitting account, network, recipient/contract, transaction hash, and dApp submission stage. Token-symbol/decimal decoding for external ERC-20 activity is still on the hardening list.
+Transactions submitted from this dApp are recorded in the NixWallet Activity tab after NixWallet sends them. External entries include account, network, recipient/contract, transaction hash, and dApp submission stage. The extension decodes verified ERC-20 transfers, wrapper shield/unwrap/confidential actions, and native cETH flows where possible (`extension/src/lib/txDecode.ts`).
 
 ## Known hardening items
 
-- Decode token symbol/decimals for richer external transaction Activity rows.
 - Track external dApp transactions from submitted to confirmed.
 - Make the claim flow more guided when CoFHE proof availability allows it.
 - Expand browser end-to-end tests with a freshly loaded extension build.

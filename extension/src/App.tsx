@@ -37,6 +37,7 @@ function App() {
     symbol: string;
     address: string;
     decimals?: number;
+    sendMode?: 'public' | 'private';
   } | null>(null);
 
   const handleUnlock = useCallback(async (data: VaultData) => {

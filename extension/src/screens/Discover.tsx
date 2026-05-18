@@ -11,6 +11,13 @@ interface DApp {
 
 const DAPPS: DApp[] = [
   {
+    name: 'NixWallet Companion',
+    description: 'Hosted test dApp for native ETH → cETH, stablecoins, wrap, and confidential flows.',
+    url: 'https://nixwalletdapp.vercel.app',
+    icon: <ExternalLink className="w-5 h-5 text-brand-cyan" />,
+    category: 'TESTING',
+  },
+  {
     name: 'Fhenix.io',
     description: 'The official home of the Fhenix ecosystem.',
     url: 'https://www.fhenix.io/',

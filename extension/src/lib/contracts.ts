@@ -1,15 +1,25 @@
 /**
- * Contract interaction helpers for FHERC20 ERC20 wrappers.
+ * Contract interaction helpers for FHERC20 ERC20 wrappers and native ETH wrapper.
  *
- * Uses an on-chain FHERC20WrapperRegistry that auto-deploys one wrapper
- * per underlying ERC-20 the first time anyone interacts with it.
+ * ERC-20: on-chain FHERC20WrapperRegistry auto-deploys one wrapper per token.
+ * Native: FHERC20NativeWrapper (`shieldNative` / shared unshield flow) — see nativeToken.ts.
  */
 import { ethers } from 'ethers';
-import { getActiveNetwork } from './wallet';
+import { getActiveNetwork, type NetworkId } from './wallet';
+import {
+  alignToWrapperRate,
+  getNativeWrapperAddress,
+  isNativeTokenAddress,
+  WETH_ADDRESSES,
+} from './nativeToken';
+
+export { isNativeTokenAddress, isNativeWrapperConfigured, NATIVE_TOKEN_ADDRESS, NATIVE_TOKEN_METADATA } from './nativeToken';
 
 // ABI for FHERC20 ERC20 wrapper contracts
 export const WRAPPER_ABI = [
   'function shield(address to, uint256 amount) external returns (bytes32)',
+  'function shieldNative(address to) external payable returns (bytes32)',
+  'function shieldWrappedNative(address to, uint256 value) external returns (bytes32)',
   'function unshield(address from, address to, uint64 amount) external returns (bytes32)',
   'function claimUnshielded(bytes32 unshieldRequestId, uint64 unshieldAmountCleartext, bytes decryptionProof) external',
   'function claimUnshieldedBatch(bytes32[] unshieldRequestIds, uint64[] unshieldAmountCleartexts, bytes[] decryptionProofs) external',
@@ -41,6 +51,12 @@ const _wrapperCache: Record<string, string> = {};
 
 /** Read-only lookup: returns the wrapper address or null if none deployed yet */
 export async function getWrapperAddress(provider: ethers.Provider, underlying: string): Promise<string | null> {
+  if (isNativeTokenAddress(underlying)) {
+    const network = getActiveNetwork();
+    const addr = getNativeWrapperAddress(network.id);
+    return addr === ethers.ZeroAddress ? null : addr;
+  }
+
   const registryAddress = getRegistryAddress();
   if (registryAddress === ethers.ZeroAddress) return null;
   const key = underlying.toLowerCase();
@@ -52,6 +68,12 @@ export async function getWrapperAddress(provider: ethers.Provider, underlying: s
 
   _wrapperCache[key] = addr;
   return addr;
+}
+
+/** Native wrapper must be deployed separately (not via registry). */
+export function getNativeWrapperAddressForNetwork(networkId: NetworkId = getActiveNetwork().id): string | null {
+  const addr = getNativeWrapperAddress(networkId);
+  return addr === ethers.ZeroAddress ? null : addr;
 }
 
 /** Deploy wrapper via registry if it doesn't exist yet, then return its address */
@@ -81,8 +103,63 @@ export async function getWrapperContract(signerOrProvider: ethers.Signer | ether
   return new ethers.Contract(addr, WRAPPER_ABI, signerOrProvider);
 }
 
+/** Shield native ETH via FHERC20NativeWrapper.shieldNative (payable). */
+export async function shieldNative(
+  signer: ethers.Signer,
+  to: string,
+  amountWei: bigint,
+  networkId: NetworkId = getActiveNetwork().id,
+): Promise<ethers.ContractTransactionResponse> {
+  const wrapperAddress = getNativeWrapperAddress(networkId);
+  if (wrapperAddress === ethers.ZeroAddress) {
+    throw new Error('Native ETH wrapper not deployed on this network. Run hardhat NativeWrapper deploy and set the address.');
+  }
+
+  const wrapper = new ethers.Contract(wrapperAddress, WRAPPER_ABI, signer);
+  const rate = await wrapper.rate() as bigint;
+  const aligned = alignToWrapperRate(amountWei, rate);
+  if (aligned === 0n) {
+    throw new Error('Amount too small after rate alignment. Try a slightly larger value.');
+  }
+
+  return wrapper.shieldNative(to, { value: aligned });
+}
+
+/** Shield WETH via approve + shieldWrappedNative. */
+export async function shieldWrappedNative(
+  signer: ethers.Signer,
+  to: string,
+  amountWei: bigint,
+  networkId: NetworkId = getActiveNetwork().id,
+): Promise<ethers.ContractTransactionResponse> {
+  const wrapperAddress = getNativeWrapperAddress(networkId);
+  if (wrapperAddress === ethers.ZeroAddress) {
+    throw new Error('Native ETH wrapper not deployed on this network.');
+  }
+  const weth = WETH_ADDRESSES[networkId];
+  if (!weth) throw new Error('WETH address not configured for this network.');
+
+  const wrapper = new ethers.Contract(wrapperAddress, WRAPPER_ABI, signer);
+  const rate = await wrapper.rate() as bigint;
+  const aligned = alignToWrapperRate(amountWei, rate);
+  if (aligned === 0n) throw new Error('Amount too small after rate alignment.');
+
+  const wethContract = new ethers.Contract(
+    weth,
+    ['function approve(address spender, uint256 amount) external returns (bool)'],
+    signer,
+  );
+  const approveTx = await wethContract.approve(wrapperAddress, aligned);
+  await approveTx.wait();
+
+  return wrapper.shieldWrappedNative(to, aligned);
+}
+
 /** Shield public ERC20 into confidential FHERC20 balance, auto-deploying the wrapper if needed */
 export async function shieldTokens(signer: ethers.Signer, underlying: string, to: string, amount: bigint): Promise<ethers.ContractTransactionResponse> {
+  if (isNativeTokenAddress(underlying)) {
+    return shieldNative(signer, to, amount);
+  }
   const wrapperAddress = await getOrCreateWrapper(signer, underlying);
 
   const token = new ethers.Contract(
@@ -105,6 +182,13 @@ export async function requestUnshield(
   to: string,
   amount: bigint
 ): Promise<ethers.ContractTransactionResponse> {
+  if (isNativeTokenAddress(underlying)) {
+    const networkId = getActiveNetwork().id;
+    const addr = getNativeWrapperAddress(networkId);
+    if (addr === ethers.ZeroAddress) throw new Error('Native ETH wrapper not deployed on this network.');
+    const wrapper = new ethers.Contract(addr, WRAPPER_ABI, signer);
+    return wrapper.unshield(from, to, amount);
+  }
   const wrapper = await getWrapperContract(signer, underlying);
   return wrapper.unshield(from, to, amount);
 }

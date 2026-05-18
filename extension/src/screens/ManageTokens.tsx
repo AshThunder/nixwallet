@@ -1,6 +1,8 @@
-import { useState, useEffect, useMemo, useCallback, type ReactNode } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Plus, Search, Trash2, Loader2, AlertCircle, CheckCircle, Bitcoin, DollarSign, Sparkles } from 'lucide-react';
+import { ArrowLeft, Plus, Search, Trash2, Loader2, AlertCircle, CheckCircle, Sparkles } from 'lucide-react';
+import TokenIcon from '../components/TokenIcon';
+import { hasTokenLogo } from '../lib/tokenLogos';
 import { getProvider, shortenAddress } from '../lib/wallet';
 import { getCustomTokens, saveCustomTokens, type TokenMetadata } from '../lib/tokens';
 import { discoverSepoliaWalletTokens, type DetectedToken } from '../lib/detectTokens';
@@ -197,18 +199,8 @@ export default function ManageTokens({ network, walletAddress, onBack }: Props) 
   };
 
   const tokenIcon = (symbol: string) => {
-    let iconNode: ReactNode = symbol[0];
-    let bgClass = 'bg-ui text-main';
-    if (symbol === 'USDT') {
-      iconNode = <DollarSign className="w-5 h-5 text-emerald-500" />;
-      bgClass = 'bg-emerald-500/10';
-    } else if (symbol === 'USDC') {
-      iconNode = <DollarSign className="w-5 h-5 text-blue-500" />;
-      bgClass = 'bg-blue-500/10';
-    } else if (symbol === 'WBTC') {
-      iconNode = <Bitcoin className="w-5 h-5 text-orange-500" />;
-      bgClass = 'bg-orange-500/10';
-    }
+    const bgClass = hasTokenLogo(symbol) ? 'bg-app' : 'bg-ui text-main';
+    const iconNode = <TokenIcon symbol={symbol} className="w-10 h-10 shrink-0 border border-ui overflow-hidden" />;
     return { iconNode, bgClass };
   };
 

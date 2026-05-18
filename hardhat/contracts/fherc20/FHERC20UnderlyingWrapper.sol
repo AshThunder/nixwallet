@@ -2,6 +2,7 @@
 pragma solidity ^0.8.25;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+// Same package as CoFHE docs (`@fhenixprotocol/confidential-contracts`); npm name is `fhenix-confidential-contracts`.
 import { FHERC20 } from "fhenix-confidential-contracts/contracts/FHERC20/FHERC20.sol";
 import { FHERC20ERC20Wrapper } from "fhenix-confidential-contracts/contracts/FHERC20/extensions/FHERC20ERC20Wrapper.sol";
 

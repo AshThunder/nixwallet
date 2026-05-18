@@ -293,7 +293,8 @@
         <h2><span style="color:var(--cyan)">Receive</span> funds</h2>
         <p>Open <strong>Receive</strong>. You see your <strong>address</strong> and a <strong>QR code</strong>. Share the address or let someone scan the code.</p>
         <ul class="step-list">
-            <li>Use a <strong>testnet faucet</strong> to get free test ETH on the active supported network if you need gas.</li>
+            <li>Use the dashboard <strong>ETH Faucet</strong> (Google Sepolia) or <strong>USDC Faucet</strong> (Circle) links under public balances, or any testnet faucet for gas.</li>
+            <li>On Sepolia or Base Sepolia, <strong>wrap ETH → cETH</strong> from the ETH card, then reveal and send confidential cETH.</li>
             <li>Only send <strong>testnet</strong> assets to this address when you are on testnet.</li>
         </ul>
     </div>
@@ -335,7 +336,7 @@
     <div class="slide" data-slide="11">
         <div class="slide-label mono">Extra · DApp approvals</div>
         <h2>DApp requests stay in <span style="color:var(--cyan)">NixWallet</span></h2>
-        <p>Open the companion dApp, click <strong>Connect NixWallet</strong>, and show that the trusted request appears in NixWallet — not inside the dApp.</p>
+        <p>Open the companion dApp at <a href="https://nixwalletdapp.vercel.app" target="_blank" rel="noopener">nixwalletdapp.vercel.app</a>, click <strong>Connect NixWallet</strong>, and show that the trusted request appears in NixWallet — not inside the dApp.</p>
         <ul class="step-list">
             <li><strong>Unlock first</strong> — approval is blocked while locked.</li>
             <li><strong>Generate payloads</strong> — confidential transfers generate read-only encrypted values before send.</li>
@@ -357,6 +358,7 @@
         <p style="margin-top:1.5rem;">Thanks for your time. Questions and feedback welcome.</p>
         <div class="link-row">
             <a href="https://chromewebstore.google.com/detail/nixwallet/nkkaidapildbkjmnfeieepmejghgmipi" target="_blank" class="primary">Install on Chrome</a>
+            <a href="https://nixwalletdapp.vercel.app" target="_blank">Companion dApp</a>
             <a href="index.html">Landing page</a>
             <a href="slides.html">Tech slides</a>
             <a href="https://github.com/AshThunder/nixwallet" target="_blank">GitHub</a>

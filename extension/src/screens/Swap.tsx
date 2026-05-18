@@ -32,7 +32,7 @@ export default function SwapScreen({ onBack }: Props) {
         slippageBps,
       });
       setQuote(q);
-      setStatus('Quote ready (execution disabled in Wave 3)');
+      setStatus('Quote preview only — swap execution coming in a future release');
     } catch (e: unknown) {
       setQuote(null);
       setStatus(e instanceof Error ? e.message : 'Unable to fetch quote');

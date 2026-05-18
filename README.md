@@ -31,12 +31,12 @@ NixWallet exists to make that workflow **self-custodial**, **local-first**, and 
 | Piece | What it does |
 |-------|----------------|
 | **Extension (React + Vite + CRXJS)** | Side panel UI, onboarding, vault unlock, send/receive, wrap/unwrap, settings, dApp approvals, WalletConnect wallet mode. No standalone backend. |
-| **Companion dApp (React + Vite)** | External test dApp for public ERC-20 and FHERC20 flows. It initiates requests; NixWallet owns all signing and approval UX. |
+| **Companion dApp (React + Vite)** | Hosted at [nixwalletdapp.vercel.app](https://nixwalletdapp.vercel.app) (or run locally from `dapp/`). Tests public ERC-20, native ETH → cETH, and FHERC20 flows; NixWallet owns all signing and approval UX. |
 | **Encrypted vault** | Seed / imported keys stored in `chrome.storage.local` as **AES-GCM** ciphertext; key from **PBKDF2** + password. Keys live in memory only while unlocked. |
 | **Background service worker** | Auto-lock timer, `KEEP_ALIVE` on user activity, dApp permission enforcement, side-panel approval requests, and a small **JSON-RPC proxy** for dApp-related `eth_*` calls. |
 | **coFHE SDK (`@cofhe/sdk`)** | Client-side **encrypt** (e.g. amounts as encrypted inputs), **decryptForView** (show balances in UI), **decryptForTx** (threshold proofs for claims and txs). |
 | **ethers.js** | Sepolia RPC, contract calls, signing. |
-| **Solidity (Hardhat)** | **`FHERC20WrapperRegistry`** — factory/registry for one confidential wrapper per underlying ERC-20. **`FHERC20UnderlyingWrapper`** — concrete wrapper (`shield`, `unshield`, `claimUnshielded`, `claimUnshieldedBatch`, `confidentialTransfer`, etc.). |
+| **Solidity (Hardhat)** | **`FHERC20WrapperRegistry`** — factory/registry for one confidential wrapper per underlying ERC-20. **`FHERC20UnderlyingWrapper`** — ERC-20 wrappers. **`FHERC20NativeUnderlyingWrapper`** — native ETH → cETH per network (`shieldNative`, unshield, claim). |
 
 Deep dives: **[ARCHITECTURE.md](./ARCHITECTURE.md)** (data flow, design choices) and **[SECURITY.md](./SECURITY.md)** (threat model, storage).
 
@@ -88,7 +88,9 @@ Think in **three pillars**: **wrap (shield)**, **confidential use**, **unwrap (u
 - **Confidential Tokens** — Convert standard ERC-20 tokens into confidential FHERC20 variants (e.g., USDC becomes cUSDC) via an on-chain registry
 - **FHERC20 Wrapper Registry** — Auto-deploys confidential wrappers for any ERC-20 token on first use; shared across all users
 - **Batch Claim** — Claim multiple pending unshield requests in a single transaction
+- **Native cETH (Wave 4)** — Wrap/unwrap ETH on Sepolia, Base Sepolia, and Arbitrum Sepolia via pre-deployed native wrappers; dashboard shows public/private ETH split; **private native send** when a wrapper is configured
 - **Send & Receive** — Transfer native ETH and ERC-20 tokens (public or confidential)
+- **Testnet faucets** — Dashboard links for Sepolia ETH (Google faucet) and Circle USDC on supported networks
 - **Multi-Account HD Wallet** — Derive accounts from a seed phrase or import private keys
 - **Auto-Lock Timer** — Configurable inactivity timeout (5, 10, or 30 minutes) with background service worker integration
 - **Unified Address Book** — Shared contacts between Settings and Send screens
@@ -103,7 +105,7 @@ Think in **three pillars**: **wrap (shield)**, **confidential use**, **unwrap (u
 - **WalletConnect v2 Wallet Mode** — Pair, approve sessions, handle session requests, and align WalletGuide metadata
 - **Confidential Claim Reliability** — Retry-aware decrypt/finalize flow with batch-claim fallback
 - **Activity Lifecycle Details** — Enriched confidential transaction stages in local history
-- **In-Wallet Swaps (Wave 3 MVP)** — Token selectors + quote scaffolding (execution route stays disabled in this release)
+- **In-Wallet Swaps (preview)** — Token selectors, slippage, and mock quotes; on-chain swap execution is not enabled yet
 
 ---
 
@@ -202,7 +204,8 @@ nixwallet/
 The Hardhat project contains two contracts:
 
 - **`FHERC20WrapperRegistry`** — A factory contract that auto-deploys and indexes one confidential wrapper per underlying ERC-20 token (e.g., USDC gets a "Confidential USDC" / cUSDC wrapper). The first user to interact with a new token pays the deployment gas; all subsequent users share the same wrapper.
-- **`FHERC20UnderlyingWrapper`** — The actual FHERC20 wrapper that extends Fhenix's `FHERC20ERC20Wrapper`, providing `shield`, `unshield`, `claimUnshielded`, `claimUnshieldedBatch`, and `confidentialTransfer` functionality.
+- **`FHERC20UnderlyingWrapper`** — ERC-20 FHERC20 wrapper (`shield`, `unshield`, `claimUnshielded`, `claimUnshieldedBatch`, `confidentialTransfer`, etc.).
+- **`FHERC20NativeUnderlyingWrapper`** — One deployment per network for native ETH → cETH (`shieldNative`, same unshield/claim flow). See [extension/NATIVE_WRAP.md](extension/NATIVE_WRAP.md).
 
 ```bash
 cd hardhat
@@ -226,6 +229,7 @@ npx hardhat deploy --network sepolia --tags FHERC20
 - **coFHE Docs**: [cofhe-docs.fhenix.zone](https://cofhe-docs.fhenix.zone)
 - **Creator**: [@ChrisGold__](https://x.com/ChrisGold__)
 - **Website**: [NixWallet](https://nixwallet.vercel.app/)
+- **Companion dApp**: [nixwalletdapp.vercel.app](https://nixwalletdapp.vercel.app)
 
 ## Realtime prices
 
@@ -245,17 +249,20 @@ NixWallet fetches market prices from CoinGecko and applies a trust policy before
 
 ## Companion dApp
 
-The `dapp/` package is an external test surface for NixWallet. It supports default Sepolia USDT/USDC flows plus manual token fallback:
+**Live:** [https://nixwalletdapp.vercel.app](https://nixwalletdapp.vercel.app)
+
+The hosted companion dApp (source in `dapp/`) is an external test surface for NixWallet. It supports native ETH → cETH, default Sepolia USDT/USDC flows, and manual token fallback:
 
 - connect NixWallet and display wallet/account/network/provider build
 - switch supported networks through NixWallet
+- **native ETH → cETH** via `shieldNative` (Sepolia, Base Sepolia, Arbitrum Sepolia)
 - public ERC-20 transfer
 - wrapper creation, approval, and wrap/shield
 - confidential balance reveal through CoFHE typed-data approvals
 - confidential transfer with generated read-only encrypted payload
 - unwrap request and claim preparation/finalization
 
-Run it locally with:
+Also listed in the extension **Discover** tab. For local development:
 
 ```bash
 cd dapp

@@ -178,7 +178,7 @@ function RequestDetails({ request, address }: { request: PendingProviderRequest;
           {tx.maxPriorityFeePerGas ? <Row label="Priority fee" value={`${ethers.formatUnits(BigInt(String(tx.maxPriorityFeePerGas)), 'gwei')} gwei`} /> : null}
           {decoded && (
             <div className="pt-2 border-t border-ui space-y-2">
-              <div className="text-[11px] font-bold text-brand-cyan uppercase tracking-widest">{decoded.title}</div>
+              <div className="text-detail font-bold text-brand-cyan uppercase tracking-widest">{decoded.title}</div>
               {decoded.rows.slice(0, 5).map(([label, value]) => (
                 <Row key={`${label}-${value}`} label={label} value={value} mono={value.length > 20} />
               ))}
@@ -194,7 +194,7 @@ function RequestDetails({ request, address }: { request: PendingProviderRequest;
 
 function Row({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
   return (
-    <div className="flex items-start justify-between gap-3 text-[11px]">
+    <div className="flex items-start justify-between gap-3 text-detail">
       <span className="text-sub shrink-0">{label}</span>
       <span className={`text-main text-right break-all ${mono ? 'font-mono' : ''}`}>{mono ? shorten(value) : value}</span>
     </div>
@@ -203,7 +203,7 @@ function Row({ label, value, mono = false }: { label: string; value: string; mon
 
 function Warning({ text }: { text: string }) {
   return (
-    <div className="flex gap-2 text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/25 p-2">
+    <div className="flex gap-2 text-detail text-amber-300 bg-amber-500/10 border border-amber-400/40 p-2">
       <AlertTriangle className="w-4 h-4 shrink-0" />
       <span>{text}</span>
     </div>
@@ -212,7 +212,7 @@ function Warning({ text }: { text: string }) {
 
 function InfoBox({ text }: { text: string }) {
   return (
-    <div className="flex gap-2 text-[11px] text-slate-100 bg-brand-cyan/10 border border-brand-cyan/35 p-2">
+    <div className="flex gap-2 text-detail text-slate-100 bg-brand-cyan/10 border border-brand-cyan/50 p-2">
       <ShieldCheck className="w-4 h-4 shrink-0 text-brand-cyan" />
       <span>{text}</span>
     </div>
@@ -273,7 +273,7 @@ export default function DappRequestApprovalOverlay({ address }: Props) {
   if (pendingCount === 0) return null;
 
   return (
-    <>
+    <div className="ui-density-comfortable">
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
@@ -281,7 +281,7 @@ export default function DappRequestApprovalOverlay({ address }: Props) {
           aria-label="Open pending dApp requests"
         >
           <Globe2 className="w-6 h-6" />
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-5 h-5 flex items-center justify-center px-1">
+          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-caption font-bold rounded-full min-w-5 h-5 flex items-center justify-center px-1">
             {pendingCount}
           </span>
         </button>
@@ -289,12 +289,12 @@ export default function DappRequestApprovalOverlay({ address }: Props) {
 
       {isOpen && active && (
         <div className="fixed inset-0 z-[210] bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="w-full max-w-[430px] bg-brand-midnight border border-brand-cyan/35 shadow-[0_24px_80px_rgba(0,0,0,0.55)] max-h-[92vh] overflow-hidden flex flex-col">
-            <div className="px-4 py-4 border-b border-brand-cyan/25 flex items-start justify-between gap-3 bg-[#021b2a]">
+          <div className="w-full max-w-[430px] bg-brand-midnight border-2 border-brand-cyan/50 shadow-[0_24px_80px_rgba(0,0,0,0.55)] max-h-[92vh] overflow-hidden flex flex-col">
+            <div className="px-4 py-4 border-b-2 border-brand-cyan/40 flex items-start justify-between gap-3 bg-[#021b2a]">
               <div className="min-w-0">
-                <div className="text-[10px] text-brand-cyan uppercase tracking-[0.22em] font-black">NixWallet Request</div>
+                <div className="text-caption text-brand-cyan uppercase tracking-[0.22em] font-black">NixWallet Request</div>
                 <div className="mt-1 text-xl leading-none font-brand font-black uppercase tracking-wide text-white">{title}</div>
-                <div className="mt-2 inline-flex max-w-full border border-white/10 bg-white/5 px-2 py-1 text-[10px] text-slate-300 font-mono">
+                <div className="mt-2 inline-flex max-w-full border border-white/10 bg-white/5 px-2 py-1 text-caption text-slate-300 font-mono">
                   <span className="truncate">{active.origin}</span>
                 </div>
               </div>
@@ -308,7 +308,7 @@ export default function DappRequestApprovalOverlay({ address }: Props) {
             </div>
 
             {pendingCount > 1 && (
-              <div className="px-4 py-2 border-b border-brand-cyan/20 bg-[#021b2a] flex items-center justify-between text-[11px] text-slate-300">
+              <div className="px-4 py-2 border-b-2 border-brand-cyan/40 bg-[#021b2a] flex items-center justify-between text-detail text-slate-300">
                 <button disabled={activeIndex === 0} onClick={() => setActiveIndex((i) => Math.max(0, i - 1))} className="disabled:opacity-30 flex items-center gap-1 hover:text-brand-cyan">
                   <ChevronLeft className="w-4 h-4" /> Previous
                 </button>
@@ -323,31 +323,31 @@ export default function DappRequestApprovalOverlay({ address }: Props) {
               <RequestDetails request={active} address={address} />
             </div>
 
-            <div className="p-4 border-t border-brand-cyan/25 bg-[#021b2a] space-y-2">
+            <div className="p-4 border-t-2 border-brand-cyan/40 bg-[#021b2a] space-y-2">
               {!isUnlocked && (
-                <div className="border border-amber-400/35 bg-amber-500/10 p-2 text-[11px] leading-relaxed text-amber-100">
+                <div className="border border-amber-400/40 bg-amber-500/10 p-2 text-detail leading-relaxed text-amber-100">
                   Unlock NixWallet before approving this request. The site cannot receive approval while the wallet is locked.
                 </div>
               )}
               {actionError && (
-                <div className="border border-red-400/35 bg-red-500/10 p-2 text-[11px] leading-relaxed text-red-100">
+                <div className="border border-red-400/35 bg-red-500/10 p-2 text-detail leading-relaxed text-red-100">
                   {actionError}
                 </div>
               )}
               <div className="grid grid-cols-2 gap-2">
-                <button onClick={() => act(false)} className="py-3 border border-white/45 bg-white/5 text-white text-xs font-black uppercase tracking-widest hover:border-red-400 hover:text-red-300">
+                <button onClick={() => act(false)} className="py-3 border border-white/45 bg-white/5 text-white text-[13px] font-black uppercase tracking-widest hover:border-red-400 hover:text-red-300">
                   Reject
                 </button>
                 <button
                   onClick={() => act(true)}
                   disabled={!isUnlocked}
-                  className="py-3 border border-brand-cyan bg-brand-cyan text-brand-midnight text-xs font-black uppercase tracking-widest shadow-[0_0_22px_rgba(10,217,220,0.22)] hover:bg-cyan-200 disabled:border-slate-500/40 disabled:bg-slate-700 disabled:text-slate-400 disabled:shadow-none"
+                  className="py-3 border border-brand-cyan bg-brand-cyan text-brand-midnight text-[13px] font-black uppercase tracking-widest shadow-[0_0_22px_rgba(10,217,220,0.22)] hover:bg-cyan-200 disabled:border-slate-500/40 disabled:bg-slate-700 disabled:text-slate-400 disabled:shadow-none"
                 >
                   {isUnlocked ? 'Approve' : 'Unlock First'}
                 </button>
               </div>
               {pendingCount > 1 && (
-                <button onClick={rejectAll} className="w-full py-2 text-[10px] uppercase tracking-widest text-red-300 hover:text-red-200">
+                <button onClick={rejectAll} className="w-full py-2 text-caption uppercase tracking-widest text-red-300 hover:text-red-200">
                   Reject all pending requests
                 </button>
               )}
@@ -355,6 +355,6 @@ export default function DappRequestApprovalOverlay({ address }: Props) {
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }

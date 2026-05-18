@@ -121,7 +121,9 @@ After code changes, run **`npm run build`** again and use **Reload** on `chrome:
 ## 10. Related docs
 
 - **[README.md](./README.md)** — architecture and screen overview  
+- **[NATIVE_WRAP.md](./NATIVE_WRAP.md)** — native ETH → cETH wrappers and deploy addresses  
 - **[WALLETGUIDE_SUBMISSION.md](./WALLETGUIDE_SUBMISSION.md)** — Reown WalletGuide listing checklist and verification  
-- **Repo root [README.md](../README.md)** — full project (Hardhat, presentation site)
+- **Repo root [README.md](../README.md)** — full project (Hardhat, presentation site)  
+- **Companion dApp:** [https://nixwalletdapp.vercel.app](https://nixwalletdapp.vercel.app) (or `../dapp/` for local dev)
 
 Smart contracts for the on-chain registry live in **`../hardhat/`**; the extension points at a deployed registry address in code — see root README for the current Sepolia address.

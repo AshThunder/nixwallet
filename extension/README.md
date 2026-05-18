@@ -37,7 +37,8 @@ The extension is built with React 19, TypeScript, Tailwind CSS v4, and Vite. It 
 | `Settings.tsx` | Security, address book, networks, about |
 | `Onboarding.tsx` | Wallet creation and seed phrase backup |
 | `Unlock.tsx` | Password entry for vault decryption |
-| `Swap.tsx` | Swap MVP scaffold with token selectors, quote state, and explicit non-execution messaging |
+| `Swap.tsx` | Swap preview UI (mock quotes; on-chain execution not enabled) |
+| **[NATIVE_WRAP.md](./NATIVE_WRAP.md)** | Native ETH → cETH via `FHERC20NativeWrapper` (`shieldNative` / unshield claim) on Sepolia, Base Sepolia, Arbitrum Sepolia |
 | `Dapps.tsx` | Connected dApps, WalletConnect pairing/session controls, pending request context |
 | `Discover.tsx` | Ecosystem links |
 
@@ -51,6 +52,10 @@ The extension is built with React 19, TypeScript, Tailwind CSS v4, and Vite. It 
 | `contracts.ts` | FHERC20 registry + wrapper interaction helpers |
 | `contacts.ts` | Unified address book (shared by Send + Settings) |
 | `activity.ts` | Transaction history storage and retrieval |
+| `txDecode.ts` | Decode external dApp/WalletConnect activity (ERC-20, wrappers, cETH) |
+| `nativeToken.ts` | Native wrapper addresses, WETH, shieldNative helpers |
+| `testnetFaucets.ts` | Dashboard faucet URLs (ETH, USDC, USDT) |
+| `privateBalanceState.ts` | Private balance reset/guards on account switch |
 | `tokens.ts` | Persisted custom ERC-20 list helpers |
 | `detectTokens.ts` | Suggested tokens on Sepolia (Etherscan, Blockscout, `getLogs`, balance probes) |
 | `dappPermissions.ts` | Connected-origin permissions, active chain/account tracking, revoke support |
@@ -86,4 +91,6 @@ The Dashboard Activity tab records:
 - injected dApp `eth_sendTransaction` submissions
 - WalletConnect `eth_sendTransaction` submissions
 
-External activity rows currently capture account, network, recipient/contract, transaction hash, and source stage (`dapp-submitted` or `walletconnect-submitted`). Rich token-symbol/decimal decoding for external ERC-20 rows is planned.
+External activity rows capture account, network, recipient/contract, transaction hash, and source stage (`dapp-submitted` or `walletconnect-submitted`). `txDecode.ts` enriches verified ERC-20 transfers, FHERC20 wrapper actions, and native cETH where calldata and contracts are known.
+
+**Companion dApp (testing):** [https://nixwalletdapp.vercel.app](https://nixwalletdapp.vercel.app) — also linked from the Discover tab.

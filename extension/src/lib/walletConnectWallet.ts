@@ -4,7 +4,7 @@ import { buildApprovedNamespaces, getSdkError } from '@walletconnect/utils';
 import { ethers } from 'ethers';
 import { getActiveNetwork, getNetworkByChainId, getSigner, setActiveNetwork, type NetworkId } from './wallet';
 import { NIX_WALLET_METADATA } from './walletMetadata';
-import { addActivity } from './activity';
+import { recordExternalTransaction } from './externalActivity';
 
 type Listener = () => void;
 
@@ -190,18 +190,12 @@ async function handleRequest(event: WalletConnectRequestEvent) {
         });
         result = sent.hash;
         const network = getActiveNetwork();
-        await addActivity({
-          id: sent.hash,
-          type: 'send',
-          amount: tx.value ? `${ethers.formatEther(BigInt(tx.value as string))} ${network.symbol}` : 'WalletConnect transaction',
-          status: 'success',
-          networkId: network.id,
-          address: context.address,
+        await recordExternalTransaction({
           hash: sent.hash,
-          isConfidential: false,
-          recipient: typeof tx.to === 'string' ? tx.to : undefined,
-          chainId: network.chainId,
-          txStage: 'walletconnect-submitted',
+          tx,
+          network,
+          address: context.address,
+          source: 'walletconnect',
           requestId: `${topic}:${id}`,
         });
         break;

@@ -113,9 +113,19 @@ export function shortenAddress(address: string): string {
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
 }
 
-/** Format balance from wei */
-export function formatBalance(wei: bigint, decimals = 4): string {
-  const formatted = ethers.formatEther(wei);
+/** Format a token/native amount for UI (truncates fractional digits, trims trailing zeros). */
+export function formatUnitsDisplay(
+  amount: bigint,
+  tokenDecimals: number,
+  displayDecimals = 4,
+): string {
+  const formatted = ethers.formatUnits(amount, tokenDecimals);
   const [whole, frac = ''] = formatted.split('.');
-  return `${whole}.${frac.slice(0, decimals)}`;
+  const trimmed = frac.slice(0, displayDecimals).replace(/0+$/, '');
+  return trimmed ? `${whole}.${trimmed}` : whole;
+}
+
+/** Format native ETH balance from wei */
+export function formatBalance(wei: bigint, displayDecimals = 4): string {
+  return formatUnitsDisplay(wei, 18, displayDecimals);
 }

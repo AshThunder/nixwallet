@@ -7,7 +7,7 @@ import {
   touchDappPermission,
   upsertDappPermission,
 } from './lib/dappPermissions';
-import { addActivity } from './lib/activity';
+import { recordExternalTransaction } from './lib/externalActivity';
 
 // Background service worker for the NixWallet extension
 
@@ -341,19 +341,13 @@ async function handleSensitiveRpcRequest(method: string, params: unknown[] | und
         nonce: typeof tx.nonce === 'string' ? Number(tx.nonce) : undefined,
       });
       await touchDappPermission(origin, network.chainId);
-      await addActivity({
-        id: sent.hash,
-        type: 'send',
-        amount: tx.value ? `${ethers.formatEther(BigInt(tx.value as string))} ${network.symbol}` : 'External transaction',
-        status: 'success',
-        networkId: network.id,
-        address: signer.address,
+      await recordExternalTransaction({
         hash: sent.hash,
-        isConfidential: false,
-        recipient: typeof tx.to === 'string' ? tx.to : undefined,
-        chainId: network.chainId,
-        txStage: 'dapp-submitted',
-        requestId: origin,
+        tx,
+        network,
+        address: signer.address,
+        source: 'dapp',
+        origin,
       });
       return sent.hash;
     }

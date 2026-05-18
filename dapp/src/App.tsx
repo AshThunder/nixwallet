@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { ArrowRightLeft, CheckCircle2, ExternalLink, Shield, Wallet } from 'lucide-react';
-import { formatUnits, isAddress, parseUnits } from 'ethers';
+import { formatUnits, isAddress, parseUnits, ZeroHash } from 'ethers';
+import { formatAmountDisplay } from './lib/format';
 import {
   connectNixWallet,
   discoverNixWallet,
@@ -19,24 +20,32 @@ import {
   getAllowance,
   getEncryptedBalance,
   getInjectedSigner,
+  getNativePublicBalance,
+  getNativeWrapperAddress,
   getOrCreateWrapper,
   getPendingClaims,
   getPublicBalance,
   getTokenMetadata,
   getWrapperAddress,
+  isNativeWrapperConfigured,
   requestUnshield,
   shield,
+  shieldNative,
   transferToken,
   type PendingClaim,
   type TokenMetadata,
 } from './lib/contracts';
 import { getNetworkByChainId, parseChainId, SUPPORTED_NETWORKS, type DappNetwork } from './config/networks';
+import { CETH_DECIMALS, isNativeTokenAddress, NATIVE_TOKEN_METADATA } from './config/native';
 import { getDefaultTokens } from './config/tokens';
 import { decryptForTx, decryptForView, encryptAmount64 } from './lib/cofheBrowser';
+import { withDecryptRetry } from './lib/decryptRetry';
 
 type Status = { kind: 'idle' | 'success' | 'error' | 'pending'; text: string };
 type Activity = { id: string; label: string; detail: string; createdAt: number };
 type ActionTab = 'transfer' | 'wrap' | 'confidential' | 'unwrap';
+type ClaimStage = 'idle' | 'preparing' | 'ready' | 'claiming' | 'done' | 'error';
+type ClaimState = { stage: ClaimStage; message?: string };
 
 function short(address?: string) {
   if (!address) return 'Not connected';
@@ -69,11 +78,8 @@ export default function App() {
   const [isGeneratingEncryptedTransfer, setIsGeneratingEncryptedTransfer] = useState(false);
   const [unshieldTo, setUnshieldTo] = useState('');
   const [unwrapAmount, setUnwrapAmount] = useState('');
-  const [claimProof, setClaimProof] = useState({
-    requestId: '',
-    decryptedValue: '',
-    signature: '',
-  });
+  const [claimStates, setClaimStates] = useState<Record<string, ClaimState>>({});
+  const [isFinalizingUnwrap, setIsFinalizingUnwrap] = useState(false);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [status, setStatus] = useState<Status>({ kind: 'idle', text: 'Connect NixWallet to begin.' });
   const [activeAction, setActiveAction] = useState<ActionTab>('wrap');
@@ -81,6 +87,8 @@ export default function App() {
   const network = useMemo(() => getNetworkByChainId(chainId), [chainId]);
   const provider = providerInfo?.provider || null;
   const defaultTokens = useMemo(() => getDefaultTokens(network), [network]);
+  const isNativeAsset = token ? isNativeTokenAddress(token.address) : false;
+  const confidentialDecimals = isNativeAsset ? CETH_DECIMALS : (token?.decimals ?? 6);
 
   const syncWalletState = useCallback(async (nextProvider: EthereumProvider, fallbackAccounts: string[] = []) => {
     const [accounts, chainHex] = await Promise.all([
@@ -139,10 +147,20 @@ export default function App() {
 
   const refreshTokenState = async (nextToken = token, nextNetwork = network, nextAccount = account, nextWrapper = wrapperAddress) => {
     if (!nextToken || !nextNetwork || !nextAccount) return;
-    const [balance, wrapper] = await Promise.all([
-      getPublicBalance(nextNetwork, nextToken.address, nextAccount),
-      nextWrapper ? Promise.resolve(nextWrapper) : getWrapperAddress(nextNetwork, nextToken.address),
-    ]);
+
+    let balance: bigint;
+    let wrapper: string | null;
+
+    if (isNativeTokenAddress(nextToken.address)) {
+      wrapper = nextWrapper ?? (isNativeWrapperConfigured(nextNetwork.id) ? getNativeWrapperAddress(nextNetwork.id) : null);
+      balance = await getNativePublicBalance(nextNetwork, nextAccount);
+    } else {
+      [balance, wrapper] = await Promise.all([
+        getPublicBalance(nextNetwork, nextToken.address, nextAccount),
+        nextWrapper ? Promise.resolve(nextWrapper) : getWrapperAddress(nextNetwork, nextToken.address),
+      ]);
+    }
+
     setPublicBalance(balance);
     setWrapperAddress(wrapper);
 
@@ -177,7 +195,36 @@ export default function App() {
     setEncryptedBalance(null);
     setRevealedBalance(null);
     setClaims([]);
-    setClaimProof({ requestId: '', decryptedValue: '', signature: '' });
+    setClaimStates({});
+  };
+
+  const updateClaimState = (ctHash: string, patch: ClaimState) => {
+    setClaimStates((current) => ({
+      ...current,
+      [ctHash]: { ...current[ctHash], ...patch },
+    }));
+  };
+
+  const loadNativeEth = async () => {
+    if (!network || !account) return;
+    if (!isNativeWrapperConfigured(network.id)) {
+      setStatus({ kind: 'error', text: 'Native ETH wrapper not deployed on this network.' });
+      return;
+    }
+    setStatus({ kind: 'pending', text: 'Loading native ETH wrapper...' });
+    try {
+      const wrapper = getNativeWrapperAddress(network.id);
+      const meta: TokenMetadata = { ...NATIVE_TOKEN_METADATA };
+      setToken(meta);
+      setTokenAddress(meta.address);
+      setRevealedBalance(null);
+      setClaimStates({});
+      await refreshTokenState(meta, network, account, wrapper);
+      setStatus({ kind: 'success', text: 'Native ETH / cETH flows ready.' });
+    } catch (error) {
+      clearTokenState();
+      setStatus({ kind: 'error', text: error instanceof Error ? error.message : 'Native ETH load failed.' });
+    }
   };
 
   const loadTokenByAddress = async (address: string, label = 'Token') => {
@@ -193,7 +240,7 @@ export default function App() {
       setToken(meta);
       setTokenAddress(meta.address);
       setRevealedBalance(null);
-      setClaimProof({ requestId: '', decryptedValue: '', signature: '' });
+      setClaimStates({});
       await refreshTokenState(meta, network, account, wrapper);
       setStatus({ kind: 'success', text: wrapper ? `${meta.symbol} loaded with wrapper.` : `${meta.symbol} loaded. Wrapper not deployed yet.` });
     } catch (error) {
@@ -269,20 +316,20 @@ export default function App() {
   const parsedConfidentialTransferAmount = useMemo(() => {
     try {
       if (!token || !confidentialTransferAmount) return null;
-      return parseUnits(confidentialTransferAmount, token.decimals);
+      return parseUnits(confidentialTransferAmount, confidentialDecimals);
     } catch {
       return null;
     }
-  }, [confidentialTransferAmount, token]);
+  }, [confidentialTransferAmount, token, confidentialDecimals]);
 
   const parsedUnwrapAmount = useMemo(() => {
     try {
       if (!token || !unwrapAmount) return null;
-      return parseUnits(unwrapAmount, token.decimals);
+      return parseUnits(unwrapAmount, confidentialDecimals);
     } catch {
       return null;
     }
-  }, [unwrapAmount, token]);
+  }, [unwrapAmount, token, confidentialDecimals]);
 
   const handlePublicTransfer = async () => {
     if (!provider || !network || !token || !parsedPublicTransferAmount || !publicTransferTo) return;
@@ -321,9 +368,14 @@ export default function App() {
     setStatus({ kind: 'pending', text: 'Waiting for NixWallet to confirm wrap transaction...' });
     try {
       const signer = await getInjectedSigner(provider);
-      await shield(network, signer, wrapperAddress, account, parsedWrapAmount);
+      if (isNativeTokenAddress(token.address)) {
+        await shieldNative(network, signer, account, parsedWrapAmount);
+        addActivity('Wrapped native ETH', `${wrapAmount} ETH → cETH`);
+      } else {
+        await shield(network, signer, wrapperAddress, account, parsedWrapAmount);
+        addActivity('Wrapped token', `${wrapAmount} ${token.symbol}`);
+      }
       await refreshTokenState();
-      addActivity('Wrapped token', `${wrapAmount} ${token.symbol}`);
       setStatus({ kind: 'success', text: 'Wrap transaction confirmed.' });
     } catch (error) {
       setStatus({ kind: 'error', text: error instanceof Error ? error.message : 'Wrap failed.' });
@@ -391,7 +443,7 @@ export default function App() {
       }
       const value = await decryptForView(cofheProvider, network, account, encryptedBalance);
       setRevealedBalance(value);
-      addActivity('Revealed confidential balance', formatUnits(value, token?.decimals ?? 6));
+      addActivity('Revealed confidential balance', formatUnits(value, confidentialDecimals));
       setStatus({ kind: 'success', text: 'Confidential balance revealed locally in the dApp.' });
     } catch (error) {
       setStatus({ kind: 'error', text: error instanceof Error ? error.message : 'Reveal failed.' });
@@ -405,58 +457,84 @@ export default function App() {
       setStatus({ kind: 'error', text: 'Enter a valid unwrap recipient.' });
       return;
     }
+    if (!encryptedBalance) {
+      setStatus({ kind: 'error', text: 'No confidential balance found for this wrapper yet. Wrap tokens first.' });
+      return;
+    }
     setStatus({ kind: 'pending', text: 'Waiting for NixWallet to confirm unwrap request...' });
     try {
       const signer = await getInjectedSigner(provider);
       await requestUnshield(network, signer, wrapperAddress, account, recipient, parsedUnwrapAmount);
       await refreshTokenState();
-      addActivity('Requested unwrap', `${unwrapAmount} ${token.symbol}`);
-      setStatus({ kind: 'success', text: 'Unwrap requested. Finalize once CoFHE proof is available.' });
+      addActivity('Requested unwrap', `${unwrapAmount} c${token.symbol}`);
+      setStatus({ kind: 'success', text: 'Unwrap requested. Use “Prepare & claim” on the pending claim below when it appears.' });
     } catch (error) {
       setStatus({ kind: 'error', text: error instanceof Error ? error.message : 'Unwrap request failed.' });
     }
   };
 
-  const handleClaim = async () => {
-    if (!provider || !network || !wrapperAddress || !claimProof.requestId || !claimProof.decryptedValue || !claimProof.signature) return;
-    setStatus({ kind: 'pending', text: 'Waiting for NixWallet to confirm claim transaction...' });
+  const handleFinalizeClaim = async (claim: PendingClaim) => {
+    if (!provider || !network || !wrapperAddress || !account || !token) return;
+    const current = claimStates[claim.ctHash]?.stage;
+    if (current === 'preparing' || current === 'claiming') return;
+
+    updateClaimState(claim.ctHash, { stage: 'preparing', message: 'Waiting for CoFHE threshold decrypt...' });
+    setStatus({ kind: 'pending', text: 'Preparing claim proof in NixWallet...' });
     try {
-      const signer = await getInjectedSigner(provider);
-      await claimUnshielded(
-        network,
-        signer,
-        wrapperAddress,
-        claimProof.requestId,
-        BigInt(claimProof.decryptedValue),
-        claimProof.signature,
+      const result = await withDecryptRetry(
+        () => decryptForTx(provider, network, account, claim.ctHash),
+        {
+          maxAttempts: 15,
+          onRetry: (attempt, maxAttempts) => {
+            const retryText = `Syncing with threshold node (${attempt}/${maxAttempts})...`;
+            setStatus({ kind: 'pending', text: retryText });
+            updateClaimState(claim.ctHash, { stage: 'preparing', message: retryText });
+          },
+        },
       );
+
+      const formatted = formatUnits(result.decryptedValue, confidentialDecimals);
+      updateClaimState(claim.ctHash, { stage: 'ready', message: `${formatted} ${token.symbol} ready to claim` });
+      setStatus({ kind: 'pending', text: 'Waiting for NixWallet to confirm claim transaction...' });
+      updateClaimState(claim.ctHash, { stage: 'claiming', message: 'Submitting claim transaction...' });
+
+      const signer = await getInjectedSigner(provider);
+      await claimUnshielded(network, signer, wrapperAddress, claim.ctHash, result.decryptedValue, result.signature);
       await refreshTokenState();
-      addActivity('Claim finalized', short(claimProof.requestId));
-      setStatus({ kind: 'success', text: 'Claim confirmed.' });
+      updateClaimState(claim.ctHash, { stage: 'done', message: 'Claim confirmed' });
+      addActivity('Claim finalized', `${formatted} ${token.symbol}`);
+      setStatus({ kind: 'success', text: `Claim confirmed. ${formatted} ${token.symbol} returned to your public balance.` });
     } catch (error) {
-      setStatus({ kind: 'error', text: error instanceof Error ? error.message : 'Claim failed.' });
+      const message = error instanceof Error ? error.message : 'Claim failed.';
+      updateClaimState(claim.ctHash, { stage: 'error', message });
+      setStatus({ kind: 'error', text: message });
     }
   };
 
-  const handlePrepareClaimProof = async (claim: PendingClaim) => {
-    if (!provider || !network || !account) return;
-    setStatus({ kind: 'pending', text: 'Waiting for CoFHE decrypt-for-tx result...' });
+  const handleRequestUnshieldAndFinalize = async () => {
+    if (!provider || !network || !token || !wrapperAddress || !parsedUnwrapAmount || !account) return;
+    setIsFinalizingUnwrap(true);
     try {
-      const result = await decryptForTx(provider, network, account, claim.ctHash);
-      setClaimProof({
-        requestId: claim.ctHash,
-        decryptedValue: result.decryptedValue.toString(),
-        signature: result.signature,
-      });
-      addActivity('Prepared claim proof', short(claim.ctHash));
-      setStatus({ kind: 'success', text: 'Claim proof prepared. Confirm the claim transaction in NixWallet.' });
-    } catch (error) {
-      setStatus({ kind: 'error', text: error instanceof Error ? error.message : 'Claim proof preparation failed.' });
+      await handleRequestUnshield();
+      await refreshTokenState();
+      const pending = await getPendingClaims(network, wrapperAddress, account);
+      setClaims(pending);
+      const latest = pending[pending.length - 1];
+      if (!latest) {
+        setStatus({ kind: 'success', text: 'Unwrap requested. Pending claim not visible yet — refresh and finalize in a few seconds.' });
+        return;
+      }
+      await handleFinalizeClaim(latest);
+    } finally {
+      setIsFinalizingUnwrap(false);
     }
   };
 
-  const needsApproval = parsedWrapAmount !== null && (allowance ?? 0n) < parsedWrapAmount;
+  const needsApproval = !isNativeAsset && parsedWrapAmount !== null && (allowance ?? 0n) < parsedWrapAmount;
   const hasEncryptedTransferPayload = Boolean(encryptedTransfer.ctHash && encryptedTransfer.signature);
+  const walletReady = Boolean(provider && account && network);
+  const wrapperReady = Boolean(wrapperAddress);
+  const hasConfidentialBalance = Boolean(encryptedBalance && encryptedBalance !== ZeroHash);
   const actionTabs: { id: ActionTab; label: string }[] = [
     { id: 'transfer', label: 'Public Transfer' },
     { id: 'wrap', label: 'Wrap' },
@@ -511,10 +589,21 @@ export default function App() {
         </section>
 
         <section className="space-y-4">
-          <Card title="Stablecoins">
+          <Card title="Assets">
             <p className="text-xs text-slate-400 leading-relaxed mb-4">
-              Select token
+              Native ETH (cETH) or ERC-20 stablecoins
             </p>
+            <button
+              onClick={() => void loadNativeEth()}
+              disabled={!network || !account || !isNativeWrapperConfigured(network?.id ?? 'sepolia')}
+              className={`mb-4 w-full p-4 border text-left disabled:opacity-40 ${isNativeAsset ? 'border-cyan-300 text-cyan-300' : 'border-white/10 text-white hover:border-cyan-300/50'}`}
+            >
+              <div className="text-sm font-black">Native ETH → cETH</div>
+              <div className="text-xs text-slate-400 mt-2">shieldNative · confidential transfer · unwrap to ETH</div>
+              {network && !isNativeWrapperConfigured(network.id) && (
+                <div className="text-xs text-amber-300 mt-2">Wrapper not deployed on this network.</div>
+              )}
+            </button>
             {defaultTokens.length > 0 ? (
               <div className="grid md:grid-cols-2 gap-3">
                 {defaultTokens.map((item) => (
@@ -549,11 +638,35 @@ export default function App() {
             </div>
           </Card>
 
+          {!walletReady && (
+            <Card title="Getting started">
+              <p className="text-sm text-slate-400 leading-relaxed">
+                Connect NixWallet, choose a supported testnet, then select USDT or USDC to begin.
+              </p>
+            </Card>
+          )}
+
+          {walletReady && !network && (
+            <Card title="Unsupported network">
+              <p className="text-sm text-amber-300 leading-relaxed">
+                Switch to Ethereum Sepolia, Base Sepolia, or Arbitrum Sepolia in NixWallet before loading tokens.
+              </p>
+            </Card>
+          )}
+
           {token && (
             <Card title={`${token.symbol} Manager`}>
+              {!wrapperReady && (
+                <div className="mb-4 rounded border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
+                  {isNativeAsset
+                    ? 'Native ETH wrapper is not configured on this network. Use Sepolia or Base Sepolia.'
+                    : `No confidential wrapper is deployed for ${token.symbol} on this network yet. Create the wrapper before wrapping, confidential transfers, or unwrap flows.`}
+                </div>
+              )}
+
               <div className="grid md:grid-cols-2 gap-4">
                 <Panel icon={<Wallet />} title="Public Balance">
-                  <div className="text-2xl font-black">{publicBalance !== null ? formatUnits(publicBalance, token.decimals) : '--'} {token.symbol}</div>
+                  <div className="text-2xl font-black">{publicBalance !== null ? formatAmountDisplay(publicBalance, token.decimals) : '--'} {token.symbol}</motion.div>
                   <Info label="Token" value={token.address} mono />
                   <Info label="Decimals" value={String(token.decimals)} />
                 </Panel>
@@ -562,10 +675,12 @@ export default function App() {
                   <div className="text-sm">{wrapperAddress ? 'Wrapper deployed' : 'No wrapper yet'}</div>
                   <Info label="Wrapper" value={wrapperAddress ? short(wrapperAddress) : 'Not deployed'} mono />
                   <Info label="ctHash" value={encryptedBalance ? short(encryptedBalance) : 'Not loaded'} mono />
-                  <Info label="Revealed" value={revealedBalance !== null ? formatUnits(revealedBalance, token.decimals) : 'Hidden'} />
-                  <button onClick={handleCreateWrapper} disabled={!network || !account} className="mt-3 w-full py-2 border border-cyan-300 text-cyan-300 text-xs uppercase tracking-widest font-bold disabled:opacity-40">
-                    {wrapperAddress ? 'Refresh Wrapper' : 'Create Wrapper'}
-                  </button>
+                  <Info label="Revealed" value={revealedBalance !== null ? `${formatAmountDisplay(revealedBalance, confidentialDecimals)} ${isNativeAsset ? 'cETH' : `c${token.symbol}`}` : 'Hidden'} />
+                  {!isNativeAsset && (
+                    <button onClick={handleCreateWrapper} disabled={!network || !account} className="mt-3 w-full py-2 border border-cyan-300 text-cyan-300 text-xs uppercase tracking-widest font-bold disabled:opacity-40">
+                      {wrapperAddress ? 'Refresh Wrapper' : 'Create Wrapper'}
+                    </button>
+                  )}
                   <button onClick={handleRevealBalance} disabled={!encryptedBalance} className="mt-3 w-full py-2 border border-white/10 text-white text-xs uppercase tracking-widest font-bold disabled:opacity-40">
                     Reveal Confidential Balance
                   </button>
@@ -585,7 +700,7 @@ export default function App() {
                   ))}
                 </div>
 
-                {activeAction === 'transfer' && (
+                {activeAction === 'transfer' && !isNativeAsset && (
                   <ActionPanel title={`Transfer Public ${token.symbol}`}>
                     <input
                       value={publicTransferTo}
@@ -660,20 +775,28 @@ export default function App() {
                 )}
 
                 {activeAction === 'unwrap' && (
-                  <ActionPanel title="Unwrap / Claim">
+                  <ActionPanel
+                    title="Unwrap / Claim"
+                    description="Request an unwrap, then finalize the pending claim. CoFHE proof generation and the claim transaction are both confirmed in NixWallet."
+                  >
+                    {!hasConfidentialBalance && (
+                      <div className="text-xs text-amber-200 border border-amber-400/20 bg-amber-400/10 px-3 py-2">
+                        Wrap tokens first to create a confidential balance before requesting an unwrap.
+                      </div>
+                    )}
                     <input value={unshieldTo} onChange={(event) => setUnshieldTo(event.target.value)} placeholder={`Unwrap recipient (defaults to ${short(account)})`} className="action-input font-mono" />
                     <input value={unwrapAmount} onChange={(event) => setUnwrapAmount(event.target.value)} placeholder={`Amount in confidential ${token.symbol}`} className="action-input" />
-                    <button onClick={handleRequestUnshield} disabled={!wrapperAddress || !parsedUnwrapAmount} className="action-button outline">
-                      Request Unwrap
-                    </button>
-                    <div className="grid gap-2 mt-5">
-                      <input value={claimProof.requestId} onChange={(event) => setClaimProof((prev) => ({ ...prev, requestId: event.target.value }))} placeholder="Claim request ID / ctHash" className="action-input font-mono" />
-                      <input value={claimProof.decryptedValue} onChange={(event) => setClaimProof((prev) => ({ ...prev, decryptedValue: event.target.value }))} placeholder="Decrypted value" className="action-input" />
-                      <input value={claimProof.signature} onChange={(event) => setClaimProof((prev) => ({ ...prev, signature: event.target.value }))} placeholder="CoFHE decryption proof/signature" className="action-input font-mono" />
-                      <button onClick={handleClaim} disabled={!wrapperAddress || !claimProof.requestId || !claimProof.decryptedValue || !claimProof.signature} className="action-button secondary">
-                        Finalize Claim
+                    <div className="grid md:grid-cols-2 gap-2">
+                      <button onClick={handleRequestUnshield} disabled={!wrapperAddress || !parsedUnwrapAmount || !hasConfidentialBalance} className="action-button outline">
+                        Request Unwrap
+                      </button>
+                      <button onClick={handleRequestUnshieldAndFinalize} disabled={!wrapperAddress || !parsedUnwrapAmount || !hasConfidentialBalance || isFinalizingUnwrap} className="action-button primary">
+                        {isFinalizingUnwrap ? 'Unwrapping...' : 'Unwrap & Auto-Claim'}
                       </button>
                     </div>
+                    <p className="text-xs text-slate-400">
+                      Auto-claim requests the unwrap, waits for the pending claim, prepares the CoFHE proof, and submits the claim in one guided flow.
+                    </p>
                   </ActionPanel>
                 )}
               </div>
@@ -681,15 +804,39 @@ export default function App() {
               <div className="mt-5 border border-white/10 p-4 bg-slate-950/60">
                 <h3 className="font-bold uppercase tracking-widest text-xs text-cyan-300 mb-3">Pending Claims</h3>
                 {claims.length === 0 ? (
-                  <div className="text-sm text-slate-400">No pending claims loaded.</div>
+                  <div className="text-sm text-slate-400">
+                    {wrapperReady
+                      ? 'No pending unwrap claims yet. Request an unwrap above, then finalize it here.'
+                      : 'Deploy the wrapper first to load pending claims.'}
+                  </div>
                 ) : (
                   <div className="space-y-2">
                     {claims.map((claim) => (
-                      <div key={claim.ctHash} className="text-xs font-mono border border-white/10 p-2 flex items-center justify-between gap-2">
-                        <span>{short(claim.ctHash)}</span>
-                        <button onClick={() => handlePrepareClaimProof(claim)} className="text-cyan-300 uppercase tracking-widest">
-                          {claim.claimed ? 'Claimed' : 'Prepare proof'}
+                      <div key={claim.ctHash} className="border border-white/10 p-3 space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <div>
+                            <div className="text-xs font-mono text-white">{short(claim.ctHash)}</div>
+                            <div className="text-[11px] text-slate-400 mt-1">
+                              Requested {formatUnits(claim.requestedAmount, token.decimals)} {token.symbol}
+                            </div>
+                          </div>
+                        <button
+                          onClick={() => handleFinalizeClaim(claim)}
+                          disabled={claimStates[claim.ctHash]?.stage === 'preparing' || claimStates[claim.ctHash]?.stage === 'claiming' || claimStates[claim.ctHash]?.stage === 'done'}
+                          className="text-cyan-300 uppercase tracking-widest text-[11px] font-bold disabled:opacity-40"
+                        >
+                          {claimStates[claim.ctHash]?.stage === 'done'
+                            ? 'Claimed'
+                            : claimStates[claim.ctHash]?.stage === 'preparing' || claimStates[claim.ctHash]?.stage === 'claiming'
+                              ? 'Working...'
+                              : 'Prepare & claim'}
                         </button>
+                        </div>
+                        {claimStates[claim.ctHash]?.message && (
+                          <div className={`text-[11px] ${claimStates[claim.ctHash]?.stage === 'error' ? 'text-red-300' : 'text-slate-400'}`}>
+                            {claimStates[claim.ctHash]?.message}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

@@ -8,7 +8,8 @@ Step-by-step walkthrough for demonstrating NixWallet.
 
 - Chrome browser (114+ for side panel support)
 - The extension loaded from `extension/dist` (see [README](./README.md))
-- A small amount of Sepolia ETH for transactions ([faucet](https://sepoliafaucet.com/))
+- A small amount of Sepolia ETH for transactions (use the **Google Sepolia faucet** link on the Dashboard, or [sepoliafaucet.com](https://sepoliafaucet.com/))
+- Optional: USDC on Sepolia (Circle faucet link on the USDC row in the Dashboard)
 
 ---
 
@@ -24,7 +25,8 @@ Step-by-step walkthrough for demonstrating NixWallet.
 
 ### 2. Dashboard Overview
 
-- Show the **native ETH balance** on Sepolia
+- Show the **native ETH** row with **PUBLIC | PRIVATE** balances (private requires reveal)
+- Point out **testnet faucet** links on ETH and stablecoin rows when configured
 - Point out the **2x2 action grid**: Send, Wrap/Unwrap, Swap, Receive
 - Switch between the **Tokens**, **Activity**, and **Discover** tabs
 - Note the persistent side panel — stays open while navigating other sites
@@ -49,21 +51,21 @@ Step-by-step walkthrough for demonstrating NixWallet.
 - Enter an amount to wrap — tokens are encrypted on-chain via FHE, creating a confidential token (e.g., cUSDC)
 - Show the confidential balance on the Dashboard by clicking **Reveal Balance**
 
-### 6. Batch Claiming (Unwrap)
+### 7. Batch Claiming (Unwrap)
 
 - In **Wrap/Unwrap**, switch to Unwrap mode
 - If there are pending unshield claims (from previous unwraps), a **"Claim All Pending"** banner appears
 - Click it to batch-claim all pending unshields in a single transaction
 - Show the progress: "Decrypting claim 1/3..." then "Submitting batch claim..."
 
-### 7. Manage Tokens
+### 8. Manage Tokens
 
 - From the Dashboard (or token picker flows), open **Manage tokens**
 - Show **In your wallet** vs **Saved** tabs: suggested ERC-20s from explorers / a light log scan (Sepolia) vs tokens the user explicitly saved
 - Use the **filter** to search by name, symbol, or address; note **pagination** for long lists
 - Add a token and point out that a **full rescan** is not triggered on every add (the list updates locally; rescan runs on wallet/network change or after removing a saved token)
 
-### 8. Settings Tour
+### 9. Settings Tour
 
 - Open **Settings** from the gear icon
 - Walk through each category:
@@ -73,21 +75,21 @@ Step-by-step walkthrough for demonstrating NixWallet.
   - **Connected DApps** — Show connected origins, revoke behavior, WalletConnect pairing/session controls, and pending request context.
   - **About** — Version, links
 
-### 9. Auto-Lock Demo
+### 10. Auto-Lock Demo
 
 - Set the auto-lock timer to **5 minutes** in Settings > Security
 - Leave the wallet idle
 - After 5 minutes, the wallet automatically locks and shows the unlock screen
 
-### 10. Swap MVP
+### 11. Swap preview
 
 - Click **Swap** on the Dashboard
 - Show token selectors, amount/slippage controls, and quote state
-- Explain that execution is intentionally disabled until a live route is connected
+- Explain that quotes are preview-only — on-chain swap execution is not enabled yet
 
-### 11. Companion dApp Approval Flow
+### 12. Companion dApp approval flow
 
-- Run the companion dApp from `dapp/` at `http://localhost:5173/`
+- Open **[nixwalletdapp.vercel.app](https://nixwalletdapp.vercel.app)** (or run locally: `cd dapp && npm run dev`)
 - Click **Connect NixWallet** and show the request inside NixWallet
 - If locked, show that approval is blocked until unlock
 - Approve connection, select USDC/USDT, and demonstrate:
@@ -97,10 +99,10 @@ Step-by-step walkthrough for demonstrating NixWallet.
   - generated read-only encrypted payload for confidential transfer
   - unwrap request and claim preparation/finalization
 
-### 12. Discover
+### 13. Discover
 
 - Switch to the **Discover** tab
-- Show the ecosystem links: Fhenix, CoFHE Docs, Redact Money, CarrotBox
+- Open **NixWallet Companion** (hosted dApp) and ecosystem links: Fhenix, CoFHE Docs, Redact Money, CarrotBox
 
 ---
 
@@ -109,4 +111,4 @@ Step-by-step walkthrough for demonstrating NixWallet.
 - **Why a wallet?** — The entry point for every user. Privacy starts at the wallet level.
 - **What's unique?** — Standard wallets don't support confidential tokens. NixWallet integrates FHE natively, turning any ERC-20 into a confidential token (e.g., USDC to cUSDC).
 - **Registry pattern** — Any ERC-20 can be wrapped into a confidential variant. First user deploys the wrapper; everyone else shares it.
-- **What's next?** — richer external Activity decoding, pending-to-confirmed lifecycle for dApp transactions, guided claim flow, final WalletGuide verification, and broader browser testing.
+- **What's next?** — live in-wallet swap execution (aggregator route), pending-to-confirmed lifecycle for dApp transactions, guided claim flow, final WalletGuide verification, and broader browser testing.

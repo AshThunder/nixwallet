@@ -1,17 +1,18 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, ArrowUpRight, Loader2, CheckCircle, AlertCircle, Lock, Shield, ChevronDown, Check, Eye, ExternalLink } from 'lucide-react';
-import { getWrapperAddress, getRegistryAddress } from '../lib/contracts';
+import { getWrapperAddress, getRegistryAddress, isNativeTokenAddress, isNativeWrapperConfigured, NATIVE_TOKEN_METADATA } from '../lib/contracts';
 import { initCofheClient, encryptAmount64, decryptForView, FheTypes } from '../lib/cofhe';
 import { addActivity } from '../lib/activity';
-import { getSigner, shortenAddress, getProvider, getActiveNetwork } from '../lib/wallet';
+import { getSigner, shortenAddress, getProvider, getActiveNetwork, formatUnitsDisplay } from '../lib/wallet';
 import { getContacts, saveContact, type Contact } from '../lib/contacts';
 import { ethers } from 'ethers';
+import TokenIcon from '../components/TokenIcon';
 
 interface Props {
   address: string;
   privateKey: string;
-  initialToken?: { symbol: string; address: string; decimals?: number } | null;
+  initialToken?: { symbol: string; address: string; decimals?: number; sendMode?: 'public' | 'private' } | null;
   onBack: () => void;
 }
 
@@ -19,7 +20,7 @@ type SendMode = 'public' | 'private';
 type Status = 'idle' | 'loading' | 'success' | 'error';
 
 export default function SendScreen({ address: _addr, privateKey, initialToken, onBack }: Props) {
-  const [sendMode, setSendMode] = useState<SendMode>('public');
+  const [sendMode, setSendMode] = useState<SendMode>(initialToken?.sendMode ?? 'public');
   const [recipient, setRecipient] = useState('');
   const [amount, setAmount] = useState('');
   const [status, setStatus] = useState<Status>('idle');
@@ -35,15 +36,22 @@ export default function SendScreen({ address: _addr, privateKey, initialToken, o
 
   const tokenSymbol = initialToken?.symbol || 'ETH';
   const tokenAddress = initialToken?.address || ethers.ZeroAddress;
-  const isNativeETH = tokenAddress === ethers.ZeroAddress;
+  const isNativeETH = isNativeTokenAddress(tokenAddress);
+  const wrapperUnderlying = isNativeETH ? NATIVE_TOKEN_METADATA.address : tokenAddress;
   const registryConfigured = getRegistryAddress() !== ethers.ZeroAddress;
+  const nativeWrapperConfigured = isNativeWrapperConfigured(getActiveNetwork().id);
+  const showSendModeToggle = !isNativeETH || nativeWrapperConfigured;
 
   useEffect(() => {
-    if (isNativeETH) setSendMode('public');
-  }, [isNativeETH]);
+    setSendMode(initialToken?.sendMode ?? 'public');
+  }, [initialToken?.address, initialToken?.sendMode]);
 
   useEffect(() => {
-    if (!registryConfigured || tokenAddress === ethers.ZeroAddress) { setHasWrapper(false); return; }
+    if (isNativeETH) {
+      setHasWrapper(nativeWrapperConfigured);
+      return;
+    }
+    if (!registryConfigured) { setHasWrapper(false); return; }
     let cancelled = false;
     (async () => {
       try {
@@ -53,32 +61,33 @@ export default function SendScreen({ address: _addr, privateKey, initialToken, o
       } catch { if (!cancelled) setHasWrapper(false); }
     })();
     return () => { cancelled = true; };
-  }, [tokenAddress, registryConfigured]);
+  }, [tokenAddress, registryConfigured, isNativeETH, nativeWrapperConfigured]);
 
   const fetchBalances = async () => {
     try {
       const provider = getProvider();
-      if (tokenAddress === ethers.ZeroAddress) {
+      if (isNativeETH) {
         const bal = await provider.getBalance(_addr);
-        setPublicBalance(ethers.formatEther(bal));
+        setPublicBalance(formatUnitsDisplay(bal, 18));
       } else {
         const contract = new ethers.Contract(tokenAddress, ['function balanceOf(address) view returns (uint256)'], provider);
         const bal = await contract.balanceOf(_addr);
-        setPublicBalance(ethers.formatUnits(bal, initialToken?.decimals || 18));
+        setPublicBalance(formatUnitsDisplay(bal, initialToken?.decimals || 18));
       }
-      setPrivateBalance(prev => prev || '***');
+      setPrivateBalance('***');
     } catch { /* non-critical fetch error */ }
   };
 
   const handleReveal = async () => {
-    if (!hasWrapper || !registryConfigured) return;
+    if (!hasWrapper) return;
+    if (!isNativeETH && !registryConfigured) return;
     setDecrypting(true);
     try {
       await initCofheClient(privateKey);
       const network = getActiveNetwork();
       const signer = getSigner(privateKey);
       const provider = signer.provider!;
-      const wrapperAddr = await getWrapperAddress(provider, tokenAddress);
+      const wrapperAddr = await getWrapperAddress(provider, wrapperUnderlying);
       if (!wrapperAddr) { setDecrypting(false); return; }
 
       const wrapper = new ethers.Contract(
@@ -87,12 +96,13 @@ export default function SendScreen({ address: _addr, privateKey, initialToken, o
         signer
       );
 
-      const ctHash: string = await wrapper.confidentialBalanceOf(_addr);
+      const walletAddress = _addr;
+      const ctHash: string = await wrapper.confidentialBalanceOf(walletAddress);
       if (ctHash === '0x' + '0'.repeat(64)) {
         setPrivateBalance('0.00');
       } else {
-        const decrypted = await decryptForView(ctHash, network.chainId, _addr, FheTypes.Uint64);
-        setPrivateBalance(ethers.formatUnits(decrypted, 6));
+        const decrypted = await decryptForView(ctHash, network.chainId, walletAddress, FheTypes.Uint64);
+        setPrivateBalance(formatUnitsDisplay(decrypted, 6));
       }
     } catch { /* reveal errors are non-critical */ } finally {
       setDecrypting(false);
@@ -100,10 +110,11 @@ export default function SendScreen({ address: _addr, privateKey, initialToken, o
   };
 
   useEffect(() => {
+    setPrivateBalance('***');
     getContacts().then(setContacts);
     fetchBalances();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchBalances is stable, runs on token change
-  }, [tokenAddress]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchBalances is stable, runs on token/address change
+  }, [tokenAddress, _addr]);
 
   const isValidAddress = recipient.startsWith('0x') && recipient.length === 42;
 
@@ -169,7 +180,7 @@ export default function SendScreen({ address: _addr, privateKey, initialToken, o
 
         setStatusMsg('Submitting confidential transfer...');
         const provider = signer.provider!;
-        const wrapperAddr = await getWrapperAddress(provider, tokenAddress);
+        const wrapperAddr = await getWrapperAddress(provider, wrapperUnderlying);
         if (!wrapperAddr) throw new Error('Wrapper not found');
 
         const wrapper = new ethers.Contract(
@@ -217,25 +228,25 @@ export default function SendScreen({ address: _addr, privateKey, initialToken, o
   };
 
   return (
-    <div className="w-full min-h-screen overflow-hidden bg-app text-main font-sans relative flex flex-col">
+    <div className="ui-density-comfortable w-full min-h-screen overflow-hidden bg-app text-main font-sans relative flex flex-col">
       <div className="absolute top-[-100px] left-[-100px] w-64 h-64 bg-brand-cyan/10 mix-blend-screen filter blur-[100px]" />
 
       <header className="w-full p-6 flex items-center gap-4 relative z-10 border-b border-ui">
         <button onClick={onBack} className="text-sub hover:text-brand-cyan transition-colors">
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <div>
+        <div className="flex items-center gap-3">
+          <TokenIcon symbol={tokenSymbol} className="w-9 h-9 shrink-0 border border-ui bg-app overflow-hidden" />
           <h1 className="text-xl font-bold font-brand uppercase tracking-tighter">Send {tokenSymbol}</h1>
         </div>
       </header>
 
       <main className="flex-1 w-full px-6 pt-6 relative z-10 overflow-y-auto no-scrollbar">
-        <div className="mb-4 p-3 bg-surface border border-ui text-[10px] uppercase tracking-widest text-sub font-bold">
+        <div className="mb-4 p-3 bg-surface border border-ui text-caption uppercase tracking-widest text-sub font-bold">
           Active Network: {getActiveNetwork().name} ({getActiveNetwork().chainId}) — switch in Settings if needed.
         </div>
 
-        {/* Public / Private Toggle (tokens only — no native ETH wrapping) */}
-        {!isNativeETH && (
+        {showSendModeToggle && (
           <div className="flex bg-surface p-1 mb-6">
             <button
               onClick={() => { setSendMode('public'); setStatus('idle'); }}
@@ -263,14 +274,16 @@ export default function SendScreen({ address: _addr, privateKey, initialToken, o
         {sendMode === 'private' && (
           <div className="flex items-center gap-2 mb-6 p-3 bg-brand-cyan/10 border-l-2 border-brand-cyan">
             <Shield className="w-4 h-4 text-brand-cyan shrink-0" />
-            <span className="text-[9px] text-main uppercase tracking-widest font-bold leading-relaxed">
+            <span className="text-[13px] text-main uppercase tracking-widest font-bold leading-relaxed">
               Encrypted transfer — amount hidden on chain
             </span>
           </div>
         )}
         {sendMode === 'private' && !hasWrapper && (
-          <div className="mb-6 p-3 border-l-4 border-yellow-500 bg-yellow-500/5 text-[10px] font-bold uppercase tracking-widest text-yellow-500">
-            No wrapper deployed yet — shield tokens first to auto-deploy one.
+          <div className="mb-6 p-3 border-l-4 border-yellow-500 bg-yellow-500/5 text-caption font-bold uppercase tracking-widest text-yellow-500">
+            {isNativeETH
+              ? 'Native confidential wrapper not configured on this network — deploy it and wrap ETH first.'
+              : 'No wrapper deployed yet — shield tokens first to auto-deploy one.'}
           </div>
         )}
 
@@ -315,7 +328,7 @@ export default function SendScreen({ address: _addr, privateKey, initialToken, o
                         className="w-full p-4 text-left hover:bg-input-field flex items-center justify-between border-b border-ui last:border-none group transition-colors"
                       >
                         <span className="text-label-caps text-muted group-hover:text-brand-cyan transition-colors">{c.name}</span>
-                        <span className="text-[10px] text-sub font-mono">{shortenAddress(c.address)}</span>
+                        <span className="text-caption text-sub font-mono">{shortenAddress(c.address)}</span>
                       </button>
                     ))}
                   </motion.div>
@@ -333,7 +346,7 @@ export default function SendScreen({ address: _addr, privateKey, initialToken, o
                 >
                   {saveContactToggled && <Check className="w-2 h-2 text-brand-midnight" />}
                 </div>
-                <span className="text-[9px] font-bold text-label-caps text-sub group-hover:text-main">Save Contact</span>
+                <span className="text-micro font-bold text-label-caps text-sub group-hover:text-main">Save Contact</span>
               </label>
             )}
           </div>
@@ -343,14 +356,14 @@ export default function SendScreen({ address: _addr, privateKey, initialToken, o
             <div className="flex justify-between items-end px-1">
               <label className="text-label-caps text-sub">Amount</label>
               <div className="text-right">
-                <div className="text-[10px] font-bold text-muted uppercase tracking-widest mb-1">
+                <div className="text-caption font-bold text-muted uppercase tracking-widest mb-1">
                   Balance: <span className="text-main">{sendMode === 'private' ? (privateBalance || '***') : publicBalance} {tokenSymbol}</span>
                 </div>
                 {sendMode === 'private' && privateBalance === '***' && (
                   <button 
                     onClick={handleReveal}
                     disabled={decrypting || !hasWrapper}
-                    className="flex items-center gap-1.5 text-[10px] font-bold text-brand-cyan uppercase tracking-widest hover:text-brand-cyan/80 transition-colors disabled:opacity-50"
+                    className="flex items-center gap-1.5 text-caption font-bold text-brand-cyan uppercase tracking-widest hover:text-brand-cyan/80 transition-colors disabled:opacity-50"
                   >
                     {decrypting ? <Loader2 className="w-3 h-3 animate-spin shadow-cyan" /> : <Eye className="w-3 h-3" />} Reveal Balance
                   </button>
@@ -391,19 +404,19 @@ export default function SendScreen({ address: _addr, privateKey, initialToken, o
                     {status === 'loading' && <Loader2 className="w-4 h-4 animate-spin" />}
                     {status === 'success' && <CheckCircle className="w-4 h-4" />}
                     {status === 'error' && <AlertCircle className="w-4 h-4" />}
-                    <span className="text-[11px]">{statusMsg}</span>
+                    <span className="text-detail">{statusMsg}</span>
                   </div>
                 </div>
               )}
 
               {txHash && (
-                <div className="flex justify-between items-center bg-surface border border-brand-cyan/20 px-3 py-2">
-                  <div className="text-[10px] font-bold text-sub uppercase">Transaction</div>
+                <div className="flex justify-between items-center bg-surface border-2 border-brand-cyan/35 px-3 py-2">
+                  <div className="text-caption font-bold text-sub uppercase">Transaction</div>
                   <a
                     href={`${getActiveNetwork().explorer}/tx/${txHash}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex items-center gap-1.5 text-[11px] font-bold text-brand-cyan hover:text-brand-cyan/80 transition-colors uppercase"
+                    className="flex items-center gap-1.5 text-detail font-bold text-brand-cyan hover:text-brand-cyan/80 transition-colors uppercase"
                   >
                     {txHash.slice(0, 6)}...{txHash.slice(-4)} <ExternalLink className="w-3 h-3" />
                   </a>

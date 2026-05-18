@@ -113,7 +113,15 @@ Sensitive methods are queued as pending provider requests and shown in `DappRequ
 
 `lib/activity.ts` is the single local history store. It records wallet-native send/wrap/unwrap/confidential flows, injected dApp transaction submissions, and WalletConnect transaction submissions.
 
-External transaction rows currently store the submitting account, active network, recipient/contract, transaction hash, chain ID, and source stage. Human token amount decoding for external ERC-20 calls is planned.
+External transaction rows store the submitting account, active network, recipient/contract, transaction hash, chain ID, and source stage. `lib/txDecode.ts` decodes verified ERC-20 transfers, FHERC20 wrapper shield/unwrap/confidential actions, and native cETH labels where calldata and contract metadata are available.
+
+### 13. Native ETH wrap (FHERC20NativeWrapper)
+
+ERC-20 tokens use the registry; **native ETH** uses a per-network `FHERC20NativeUnderlyingWrapper` (`shieldNative` / same unshield claim flow). See [extension/NATIVE_WRAP.md](extension/NATIVE_WRAP.md).
+
+### 14. In-Wallet Swap (preview)
+
+`Swap.tsx` + `lib/swapAdapter.ts` provide token selectors, slippage, and mock quotes. On-chain swap execution (public aggregator and confidential routes) is not wired yet.
 
 ## Data Flow
 
@@ -143,7 +151,7 @@ Screen Component (e.g. Send.tsx)
 | `extension/src/lib/` | Business logic — wallet, vault, contacts, activity, contracts, cofhe, tokens, detectTokens, dApp permissions, WalletConnect |
 | `extension/src/components/` | Shared UI (e.g. `AccountPicker`, dApp approval overlay) |
 | `extension/src/background.ts` | Service worker — auto-lock timer, RPC proxy, dApp approvals |
-| `dapp/src/` | Companion dApp for injected provider and FHERC20 flow testing |
+| `dapp/src/` | Companion dApp ([nixwalletdapp.vercel.app](https://nixwalletdapp.vercel.app)) for injected provider and FHERC20/native flow testing |
 | `extension/manifest.json` | Extension manifest (side panel, permissions, content scripts) |
 | `hardhat/contracts/` | Solidity contracts (Registry + Wrapper) |
 | `hardhat/deploy/` | Hardhat deployment scripts |

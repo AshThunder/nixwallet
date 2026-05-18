@@ -1,13 +1,15 @@
 {
   "name": "nixwallet",
   "private": true,
-  "version": "1.0.3",
+  "version": "1.0.4",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "package": "tsc -b && vite build && cd dist && zip -r ../nixwallet-1.0.3.zip .",
+    "package": "tsc -b && vite build && cd dist && zip -r ../nixwallet-1.0.4.zip .",
     "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -43,6 +45,7 @@
     "tailwindcss": "^4.2.2",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.57.0",
-    "vite": "^8.0.1"
+    "vite": "^8.0.1",
+    "vitest": "^3.2.4"
   }
 }

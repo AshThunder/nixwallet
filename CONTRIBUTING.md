@@ -7,7 +7,7 @@ Thank you for your interest in contributing to NixWallet!
 1. Fork the repository
 2. Clone your fork: `git clone https://github.com/<your-username>/nixwallet.git`
 3. **Extension:** `cd extension && npm install` — then `npm run dev` (Vite + HMR) or `npm run build` for a production bundle
-4. **Companion dApp:** `cd dapp && npm install && npm run dev` — use it to test injected-provider approvals and FHERC20 flows
+4. **Companion dApp:** use the hosted app at [nixwalletdapp.vercel.app](https://nixwalletdapp.vercel.app), or `cd dapp && npm install && npm run dev` for local testing of injected-provider approvals and FHERC20 flows
 5. **Contracts (optional):** `cd hardhat && pnpm install` — see `hardhat/README.md` for `compile` / `deploy`
 6. Load the **`extension/dist`** folder as an unpacked extension in Chrome (after `npm run build` in `extension/`)
 

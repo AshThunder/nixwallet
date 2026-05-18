@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { ArrowRightLeft, CheckCircle2, ExternalLink, Shield, Wallet } from 'lucide-react';
+import { ArrowRightLeft, CheckCircle2, ChevronDown, ExternalLink, Shield, Wallet } from 'lucide-react';
 import { formatUnits, isAddress, parseUnits, ZeroHash } from 'ethers';
 import { formatAmountDisplay } from './lib/format';
 import {
@@ -43,6 +43,9 @@ import { withDecryptRetry } from './lib/decryptRetry';
 
 const CHROME_STORE_URL =
   'https://chromewebstore.google.com/detail/nixwallet/nkkaidapildbkjmnfeieepmejghgmipi';
+const GITHUB_URL = 'https://github.com/AshThunder/nixwallet';
+const NIXWALLET_SITE_URL = 'https://nixwallet.vercel.app';
+const DAPP_SOURCE_URL = 'https://github.com/AshThunder/nixwallet/tree/main/dapp';
 
 type Status = { kind: 'idle' | 'success' | 'error' | 'pending'; text: string };
 type Activity = { id: string; label: string; detail: string; createdAt: number };
@@ -560,9 +563,12 @@ export default function App() {
             <div className="text-cyan-300 text-xs uppercase tracking-[0.35em] font-bold">NixWallet DApp</div>
             <h1 className="text-3xl font-black tracking-tight">Public + Confidential Token Manager</h1>
           </div>
-          <button onClick={handleConnect} className="px-4 py-3 bg-cyan-300 text-slate-950 font-bold uppercase tracking-widest text-xs">
-            {account ? short(account) : 'Connect NixWallet'}
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <AboutMenu />
+            <button type="button" onClick={handleConnect} className="px-4 py-3 bg-cyan-300 text-slate-950 font-bold uppercase tracking-widest text-xs">
+              {account ? short(account) : 'Connect NixWallet'}
+            </button>
+          </div>
         </div>
       </header>
 
@@ -908,6 +914,87 @@ export default function App() {
         </section>
         </div>
       </main>
+    </div>
+  );
+}
+
+function AboutMenu() {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [open]);
+
+  return (
+    <div className="about-menu" ref={rootRef}>
+      <button
+        type="button"
+        className={`about-menu-trigger ${open ? 'open' : ''}`}
+        aria-expanded={open}
+        aria-haspopup="true"
+        onClick={() => setOpen((value) => !value)}
+      >
+        About
+        <ChevronDown className="about-menu-chevron" aria-hidden />
+      </button>
+      {open && (
+        <div className="about-menu-panel" role="dialog" aria-label="About NixWallet companion dApp">
+          <div className="about-menu-title">About this companion dApp</div>
+          <p className="about-menu-lead">
+            This site <strong>showcases</strong> how any external web app can plug into{' '}
+            <strong>NixWallet</strong>—the confidential Chrome extension wallet for Fhenix FHERC20 flows. It
+            demonstrates real integration patterns (injected provider and WalletConnect) without building a
+            separate signing UI.
+          </p>
+          <p className="about-menu-note">
+            This dApp never stores private keys. Every connect, approve, sign, wrap, confidential transfer, and
+            claim is confirmed inside the NixWallet side panel.
+          </p>
+          <div className="about-menu-body">
+            <div className="about-menu-col">
+              <div className="about-menu-kicker">What it showcases</div>
+              <ul className="about-menu-list">
+                <li>Native ETH → cETH via shieldNative on Sepolia testnets</li>
+                <li>ERC-20 public transfer, wrap, confidential send, unwrap, and claim</li>
+                <li>EIP-6963 / EIP-1193 discovery and WalletConnect v2 pairing</li>
+                <li>Transactions submitted here appear in NixWallet Activity</li>
+              </ul>
+            </div>
+            <div className="about-menu-col">
+              <div className="about-menu-kicker">Links</div>
+              <div className="about-menu-links" role="none">
+                <a href={CHROME_STORE_URL} target="_blank" rel="noopener noreferrer">
+                  Install NixWallet <ExternalLink className="about-menu-link-icon" aria-hidden />
+                </a>
+                <a href={NIXWALLET_SITE_URL} target="_blank" rel="noopener noreferrer">
+                  NixWallet site <ExternalLink className="about-menu-link-icon" aria-hidden />
+                </a>
+                <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
+                  GitHub repo <ExternalLink className="about-menu-link-icon" aria-hidden />
+                </a>
+                <a href={DAPP_SOURCE_URL} target="_blank" rel="noopener noreferrer">
+                  dApp source <ExternalLink className="about-menu-link-icon" aria-hidden />
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

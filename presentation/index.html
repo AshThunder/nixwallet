@@ -412,6 +412,14 @@
             border-color: var(--cyan);
             transform: translateY(-2px);
         }
+        .story-lead {
+            color: var(--sub);
+            font-size: clamp(1rem, 2.6vw, 1.15rem);
+            line-height: 1.75;
+            margin: 0 0 1.5rem;
+            max-width: 52rem;
+        }
+        .story-lead strong { color: var(--white); }
 
         /* ── TECH STACK ────────────────────── */
         .tech-row {
@@ -614,58 +622,6 @@
     <div class="scroll-hint"><span></span></div>
 </section>
 
-<!-- COMPANION DAPP -->
-<section id="companion-dapp" style="background: var(--surface);">
-    <div class="container">
-        <div class="reveal">
-            <div class="section-label mono">External dApps</div>
-            <h2 class="section-title">Built for Sites<br> That Connect Wallets</h2>
-            <p class="section-desc">NixWallet is built for the web: any site can connect through injection or WalletConnect while users approve everything in the extension side panel.</p>
-            <div class="companion-landscape">
-                <div class="companion-landscape-top">
-                    <div class="companion-intro">
-                        <div class="companion-kicker">Live showcase</div>
-                        <h3>A reference dApp that showcases NixWallet integration</h3>
-                        <p>
-                            The hosted companion at
-                            <a href="https://nixwalletdapp.vercel.app" target="_blank" rel="noopener">nixwalletdapp.vercel.app</a>
-                            <strong>showcases</strong> how external developers wire up NixWallet—without shipping a second wallet UI.
-                            Use it to demo connect, wrap, confidential transfer, unwrap, and claim on Ethereum Sepolia, Base Sepolia, and Arbitrum Sepolia with Fhenix FHE.
-                        </p>
-                        <p class="companion-trust">
-                            The companion dApp never stores private keys or shows trusted transaction modals. It only calls the provider; NixWallet owns every approval.
-                        </p>
-                    </div>
-                    <div class="companion-grid">
-                        <div class="companion-card">
-                            <h4>What it showcases</h4>
-                            <ul>
-                                <li>Native ETH → cETH (<code>shieldNative</code>)</li>
-                                <li>Public ERC-20 transfer, wrap, and unwrap</li>
-                                <li>Confidential FHERC20 send and claim flows</li>
-                                <li>Activity from this site in NixWallet history</li>
-                            </ul>
-                        </div>
-                        <div class="companion-card">
-                            <h4>How sites connect</h4>
-                            <ul>
-                                <li><strong>EIP-6963</strong> — <code>eth_requestAccounts</code>, <code>eth_sendTransaction</code>, typed data</li>
-                                <li><strong>WalletConnect v2</strong> — Reown pairing; WalletGuide-listed</li>
-                                <li><strong>Side panel</strong> — connect / sign / send confirmed in-wallet</li>
-                                <li><strong>Open source</strong> — copy patterns from <code>dapp/</code> in the repo</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-                <div class="companion-cta-row">
-                    <a href="https://nixwalletdapp.vercel.app" target="_blank" rel="noopener" class="btn-companion-primary">Open Companion dApp</a>
-                    <a href="https://github.com/AshThunder/nixwallet/tree/main/dapp" target="_blank" rel="noopener" class="btn-companion-secondary">View dApp Source</a>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
 <!-- FEATURES -->
 <section id="features">
     <div class="container">
@@ -788,6 +744,61 @@
         </div>
     </div>
 </section>
+
+<!-- COMPANION DAPP -->
+<section id="companion-dapp" style="background: var(--surface);">
+    <div class="container">
+        <div class="reveal">
+            <div class="section-label mono">Companion dApp</div>
+            <h2 class="section-title">We Built a Reference Site<br>to Showcase NixWallet</h2>
+            <p class="story-lead">
+                We built a <strong>Chrome extension wallet</strong> and a <strong>hosted companion dApp</strong> to make confidential Fhenix flows feel familiar in the browser—wrap public tokens, send encrypted amounts, unwrap, and claim—while proving that <strong>any external site</strong> can connect through the same provider without shipping a second signing UI.
+            </p>
+            <p class="story-lead">
+                The companion at <a href="https://nixwalletdapp.vercel.app" target="_blank" rel="noopener" style="color: var(--cyan); font-weight: 600;">nixwalletdapp.vercel.app</a> exists so developers can copy a real integration on <strong>Ethereum Sepolia</strong>, <strong>Base Sepolia</strong>, and <strong>Arbitrum Sepolia</strong> with Fhenix FHE, and so judges and users can try the full path in one click.
+            </p>
+            <div class="companion-landscape">
+                <div class="companion-landscape-top">
+                    <div class="companion-intro">
+                        <div class="companion-kicker">Live showcase</div>
+                        <h3>Try the live integration</h3>
+                        <p>
+                            Connect from the site, approve in the NixWallet side panel, and walk through wrap → confidential send → unwrap → claim. The companion never holds keys—it only calls <code style="color: var(--cyan);">eth_*</code> on the injected provider.
+                        </p>
+                        <p class="companion-trust">
+                            The companion dApp never stores private keys or shows trusted transaction modals. It only calls the provider; NixWallet owns every approval.
+                        </p>
+                    </div>
+                    <div class="companion-grid">
+                        <div class="companion-card">
+                            <h4>What it showcases</h4>
+                            <ul>
+                                <li>Native ETH → cETH (<code>shieldNative</code>)</li>
+                                <li>Public ERC-20 transfer, wrap, and unwrap</li>
+                                <li>Confidential FHERC20 send and claim flows</li>
+                                <li>Activity from this site in NixWallet history</li>
+                            </ul>
+                        </div>
+                        <div class="companion-card">
+                            <h4>How sites connect</h4>
+                            <ul>
+                                <li><strong>EIP-6963</strong> — <code>eth_requestAccounts</code>, <code>eth_sendTransaction</code>, typed data</li>
+                                <li><strong>WalletConnect v2</strong> — Reown pairing; WalletGuide-listed</li>
+                                <li><strong>Side panel</strong> — connect / sign / send confirmed in-wallet</li>
+                                <li><strong>Open source</strong> — copy patterns from <code>dapp/</code> in the repo</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="companion-cta-row">
+                    <a href="https://nixwalletdapp.vercel.app" target="_blank" rel="noopener" class="btn-companion-primary">Open Companion dApp</a>
+                    <a href="https://github.com/AshThunder/nixwallet/tree/main/dapp" target="_blank" rel="noopener" class="btn-companion-secondary">View dApp Source</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
 
 <!-- CREATOR -->
 <section>

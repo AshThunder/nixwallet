@@ -74,8 +74,10 @@ async function waitForTransaction(network: DappNetwork, tx: ContractTransactionR
   return receipt;
 }
 
-export async function getInjectedSigner(provider: EthereumProvider): Promise<Signer> {
-  const browserProvider = new BrowserProvider(provider);
+export async function getInjectedSigner(provider: EthereumProvider, network?: DappNetwork): Promise<Signer> {
+  const browserProvider = network
+    ? new BrowserProvider(provider, network.chainId)
+    : new BrowserProvider(provider);
   return browserProvider.getSigner();
 }
 

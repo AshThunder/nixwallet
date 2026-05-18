@@ -50,7 +50,7 @@ export async function initCofheBrowser(provider: EthereumProvider, network: Dapp
   }
 
   const accountProvider = withConnectedAccount(provider, account);
-  const browserProvider = new BrowserProvider(accountProvider);
+  const browserProvider = new BrowserProvider(accountProvider, network.chainId);
   const signer: Signer = await browserProvider.getSigner(account);
   const adapter = await Ethers6Adapter(browserProvider, signer);
   const config = createCofheConfig({

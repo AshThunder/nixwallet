@@ -155,6 +155,109 @@ textarea::placeholder {
   opacity: 1;
 }
 
+.choice-section-label {
+  color: #f8fafc;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+}
+
+.choice-button {
+  align-items: flex-start;
+  background: #fff;
+  border: 2px solid #e2e8f0;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.35);
+  color: #020617;
+  cursor: pointer;
+  display: flex;
+  font-weight: 800;
+  gap: 0.75rem;
+  justify-content: space-between;
+  text-align: left;
+  transition: transform 0.12s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.choice-button:hover:not(:disabled) {
+  border-color: #22d3ee;
+  box-shadow: 0 6px 18px rgb(34 211 238 / 0.25);
+  transform: translateY(-1px);
+}
+
+.choice-button:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.3);
+}
+
+.choice-button.selected {
+  background: #ecfeff;
+  border-color: #0891b2;
+  box-shadow: 0 0 0 2px rgb(34 211 238 / 0.45), 0 4px 14px rgb(0 0 0 / 0.25);
+}
+
+.choice-button:disabled {
+  background: rgb(30 41 59 / 0.85);
+  border-color: rgb(148 163 184 / 0.22);
+  box-shadow: none;
+  color: #94a3b8;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.choice-button-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.choice-button-action {
+  align-self: center;
+  background: #020617;
+  border-radius: 0.25rem;
+  color: #67e8f9;
+  flex-shrink: 0;
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  padding: 0.35rem 0.5rem;
+  text-transform: uppercase;
+}
+
+.choice-button.selected .choice-button-action {
+  background: #0891b2;
+  color: #fff;
+}
+
+.choice-button:disabled .choice-button-action {
+  background: rgb(51 65 85 / 0.6);
+  color: #94a3b8;
+}
+
+.choice-button .choice-sub {
+  color: #475569;
+  font-weight: 500;
+}
+
+.choice-button.selected .choice-sub {
+  color: #0e7490;
+}
+
+.install-banner {
+  background: rgb(103 232 249 / 0.1);
+  border: 1px solid rgb(103 232 249 / 0.35);
+  color: #e2e8f0;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  padding: 1rem 1.25rem;
+}
+
+.install-banner a {
+  color: #67e8f9;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
 .bg-\[\#050816\] {
   background-color: #050816;
 }

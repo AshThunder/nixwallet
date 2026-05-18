@@ -41,6 +41,9 @@ import { getDefaultTokens } from './config/tokens';
 import { decryptForTx, decryptForView, encryptAmount64 } from './lib/cofheBrowser';
 import { withDecryptRetry } from './lib/decryptRetry';
 
+const CHROME_STORE_URL =
+  'https://chromewebstore.google.com/detail/nixwallet/nkkaidapildbkjmnfeieepmejghgmipi';
+
 type Status = { kind: 'idle' | 'success' | 'error' | 'pending'; text: string };
 type Activity = { id: string; label: string; detail: string; createdAt: number };
 type ActionTab = 'transfer' | 'wrap' | 'confidential' | 'unwrap';
@@ -166,7 +169,9 @@ export default function App() {
 
     if (wrapper) {
       const [nextAllowance, ctHash, pendingClaims] = await Promise.all([
-        getAllowance(nextNetwork, nextToken.address, nextAccount, wrapper),
+        isNativeTokenAddress(nextToken.address)
+          ? Promise.resolve(null)
+          : getAllowance(nextNetwork, nextToken.address, nextAccount, wrapper),
         getEncryptedBalance(nextNetwork, wrapper, nextAccount).catch(() => null),
         getPendingClaims(nextNetwork, wrapper, nextAccount).catch(() => []),
       ]);
@@ -277,6 +282,10 @@ export default function App() {
   };
 
   const handleLoadToken = async () => {
+    if (tokenAddress.trim().toLowerCase() === 'native') {
+      await loadNativeEth();
+      return;
+    }
     await loadTokenByAddress(tokenAddress, 'custom token');
   };
 
@@ -284,7 +293,7 @@ export default function App() {
     if (!provider || !network || !token) return;
     setStatus({ kind: 'pending', text: 'Waiting for NixWallet to approve wrapper creation...' });
     try {
-      const signer = await getInjectedSigner(provider);
+      const signer = await getInjectedSigner(provider, network);
       const wrapper = await getOrCreateWrapper(network, signer, token.address);
       setWrapperAddress(wrapper);
       await refreshTokenState(token, network, account, wrapper);
@@ -339,7 +348,7 @@ export default function App() {
     }
     setStatus({ kind: 'pending', text: 'Waiting for NixWallet to confirm public token transfer...' });
     try {
-      const signer = await getInjectedSigner(provider);
+      const signer = await getInjectedSigner(provider, network);
       await transferToken(network, signer, token.address, publicTransferTo, parsedPublicTransferAmount);
       await refreshTokenState();
       addActivity('Public transfer', `${publicTransferAmount} ${token.symbol} to ${short(publicTransferTo)}`);
@@ -353,7 +362,7 @@ export default function App() {
     if (!provider || !network || !token || !wrapperAddress || !parsedWrapAmount) return;
     setStatus({ kind: 'pending', text: 'Waiting for NixWallet to approve token spending...' });
     try {
-      const signer = await getInjectedSigner(provider);
+      const signer = await getInjectedSigner(provider, network);
       await approveWrapper(network, signer, token.address, wrapperAddress, parsedWrapAmount);
       await refreshTokenState();
       addActivity('Approved wrapper', `${wrapAmount} ${token.symbol}`);
@@ -367,7 +376,7 @@ export default function App() {
     if (!provider || !network || !token || !wrapperAddress || !parsedWrapAmount || !account) return;
     setStatus({ kind: 'pending', text: 'Waiting for NixWallet to confirm wrap transaction...' });
     try {
-      const signer = await getInjectedSigner(provider);
+      const signer = await getInjectedSigner(provider, network);
       if (isNativeTokenAddress(token.address)) {
         await shieldNative(network, signer, account, parsedWrapAmount);
         addActivity('Wrapped native ETH', `${wrapAmount} ETH → cETH`);
@@ -390,7 +399,7 @@ export default function App() {
     }
     setStatus({ kind: 'pending', text: 'Waiting for NixWallet to confirm confidential transfer...' });
     try {
-      const signer = await getInjectedSigner(provider);
+      const signer = await getInjectedSigner(provider, network);
       await confidentialTransfer(network, signer, wrapperAddress, confidentialTransferTo, {
         ctHash: encryptedTransfer.ctHash,
         securityZone: Number(encryptedTransfer.securityZone || 0),
@@ -463,7 +472,7 @@ export default function App() {
     }
     setStatus({ kind: 'pending', text: 'Waiting for NixWallet to confirm unwrap request...' });
     try {
-      const signer = await getInjectedSigner(provider);
+      const signer = await getInjectedSigner(provider, network);
       await requestUnshield(network, signer, wrapperAddress, account, recipient, parsedUnwrapAmount);
       await refreshTokenState();
       addActivity('Requested unwrap', `${unwrapAmount} c${token.symbol}`);
@@ -498,7 +507,7 @@ export default function App() {
       setStatus({ kind: 'pending', text: 'Waiting for NixWallet to confirm claim transaction...' });
       updateClaimState(claim.ctHash, { stage: 'claiming', message: 'Submitting claim transaction...' });
 
-      const signer = await getInjectedSigner(provider);
+      const signer = await getInjectedSigner(provider, network);
       await claimUnshielded(network, signer, wrapperAddress, claim.ctHash, result.decryptedValue, result.signature);
       await refreshTokenState();
       updateClaimState(claim.ctHash, { stage: 'done', message: 'Claim confirmed' });
@@ -532,6 +541,7 @@ export default function App() {
 
   const needsApproval = !isNativeAsset && parsedWrapAmount !== null && (allowance ?? 0n) < parsedWrapAmount;
   const hasEncryptedTransferPayload = Boolean(encryptedTransfer.ctHash && encryptedTransfer.signature);
+  const extensionDetected = Boolean(providerInfo);
   const walletReady = Boolean(provider && account && network);
   const wrapperReady = Boolean(wrapperAddress);
   const hasConfidentialBalance = Boolean(encryptedBalance && encryptedBalance !== ZeroHash);
@@ -556,7 +566,19 @@ export default function App() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl p-6 grid lg:grid-cols-[360px_1fr] gap-6">
+      <main className="mx-auto max-w-6xl p-6 space-y-4">
+        {!extensionDetected && (
+          <div className="install-banner">
+            <strong>Install NixWallet first.</strong> This site is an external dApp—it does not hold keys or show transaction approvals.
+            Install the{' '}
+            <a href={CHROME_STORE_URL} target="_blank" rel="noopener noreferrer">
+              NixWallet Chrome extension
+            </a>
+            , load it from <code className="font-mono text-cyan-300">extension/dist</code> in dev, then refresh this page and click <strong>Connect NixWallet</strong>.
+          </div>
+        )}
+
+        <div className="grid lg:grid-cols-[360px_1fr] gap-6">
         <section className="space-y-4">
           <Card title="Wallet">
             <Info label="Wallet" value={providerInfo ? providerInfo.info.name : 'Not detected'} />
@@ -568,9 +590,10 @@ export default function App() {
               {SUPPORTED_NETWORKS.map((item) => (
                 <button
                   key={item.id}
+                  type="button"
                   onClick={() => handleSwitchNetwork(item)}
                   disabled={!provider}
-                  className={`px-3 py-2 border text-left text-xs uppercase tracking-widest ${network?.id === item.id ? 'border-cyan-300 text-cyan-300' : 'border-white/10 text-slate-300'}`}
+                  className={`choice-button w-full px-3 py-2 text-left text-xs uppercase tracking-widest ${network?.id === item.id ? 'selected' : ''}`}
                 >
                   {item.name}
                 </button>
@@ -593,31 +616,43 @@ export default function App() {
             <p className="text-xs text-slate-400 leading-relaxed mb-4">
               Native ETH (cETH) or ERC-20 stablecoins
             </p>
+            <div className="choice-section-label">Select token</div>
             <button
+              type="button"
               onClick={() => void loadNativeEth()}
               disabled={!network || !account || !isNativeWrapperConfigured(network?.id ?? 'sepolia')}
-              className={`mb-4 w-full p-4 border text-left disabled:opacity-40 ${isNativeAsset ? 'border-cyan-300 text-cyan-300' : 'border-white/10 text-white hover:border-cyan-300/50'}`}
+              className={`choice-button mb-3 w-full p-4 ${isNativeAsset ? 'selected' : ''}`}
             >
-              <div className="text-sm font-black">Native ETH → cETH</div>
-              <div className="text-xs text-slate-400 mt-2">shieldNative · confidential transfer · unwrap to ETH</div>
-              {network && !isNativeWrapperConfigured(network.id) && (
-                <div className="text-xs text-amber-300 mt-2">Wrapper not deployed on this network.</div>
-              )}
+              <div className="choice-button-body">
+                <div className="text-sm font-black">Native ETH → cETH</div>
+                <div className="choice-sub text-xs mt-2">shieldNative · confidential transfer · unwrap to ETH</div>
+                {network && !isNativeWrapperConfigured(network.id) && (
+                  <div className="text-xs text-amber-700 mt-2 font-bold">Wrapper not deployed on this network.</div>
+                )}
+              </div>
+              <span className="choice-button-action">{isNativeAsset ? 'Active' : 'Select'}</span>
             </button>
             {defaultTokens.length > 0 ? (
               <div className="grid md:grid-cols-2 gap-3">
-                {defaultTokens.map((item) => (
+                {defaultTokens.map((item) => {
+                  const isSelected = token?.address.toLowerCase() === item.address.toLowerCase();
+                  return (
                   <button
+                    type="button"
                     key={item.address}
                     onClick={() => loadTokenByAddress(item.address, item.symbol)}
                     disabled={!network || !account}
-                    className={`p-4 border text-left disabled:opacity-40 ${token?.address.toLowerCase() === item.address.toLowerCase() ? 'border-cyan-300 text-cyan-300' : 'border-white/10 text-white'}`}
+                    className={`choice-button p-4 ${isSelected ? 'selected' : ''}`}
                   >
-                    <div className="text-sm font-black">{item.symbol}</div>
-                    <div className="text-xs text-slate-400 mt-2">{item.name}</div>
-                    <div className="text-xs text-slate-400 font-mono mt-2">{short(item.address)}</div>
+                    <div className="choice-button-body">
+                      <div className="text-sm font-black">{item.symbol}</div>
+                      <div className="choice-sub text-xs mt-2">{item.name}</div>
+                      <div className="choice-sub text-xs font-mono mt-2">{short(item.address)}</div>
+                    </div>
+                    <span className="choice-button-action">{isSelected ? 'Active' : 'Select'}</span>
                   </button>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="text-sm text-slate-400">
@@ -641,7 +676,9 @@ export default function App() {
           {!walletReady && (
             <Card title="Getting started">
               <p className="text-sm text-slate-400 leading-relaxed">
-                Connect NixWallet, choose a supported testnet, then select USDT or USDC to begin.
+                {extensionDetected
+                  ? 'Click Connect NixWallet in the header, approve in the extension side panel, pick a testnet, then tap a white asset button below.'
+                  : 'Install the NixWallet Chrome extension first (see banner above), refresh, then connect and pick an asset.'}
               </p>
             </Card>
           )}
@@ -869,6 +906,7 @@ export default function App() {
             )}
           </Card>
         </section>
+        </div>
       </main>
     </div>
   );

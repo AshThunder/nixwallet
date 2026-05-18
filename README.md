@@ -4,6 +4,8 @@
 
 Introducing **NixWallet**: a self-custodial Chrome extension wallet that wraps everyday ERC-20s into **FHERC20** confidential assets, sends **encrypted amounts** with Fhenix **coFHE**, and keeps the wallet one click away in the **side panel**.
 
+**Companion dApp:** [nixwalletdapp.vercel.app](https://nixwalletdapp.vercel.app) — a hosted reference site that shows how **any external dApp** can interact with NixWallet through the injected provider (EIP-1193 / EIP-6963) or WalletConnect, without building its own signing or approval UI.
+
 Built for the **Fhenix** stack and **Fully Homomorphic Encryption (FHE)** — shield, run wallet logic against ciphertext, and unwrap back to public tokens when you choose.
 
 **Demo video:** [YouTube — NixWallet walkthrough](https://youtu.be/QyfxLNSE_MQ)
@@ -31,7 +33,7 @@ NixWallet exists to make that workflow **self-custodial**, **local-first**, and 
 | Piece | What it does |
 |-------|----------------|
 | **Extension (React + Vite + CRXJS)** | Side panel UI, onboarding, vault unlock, send/receive, wrap/unwrap, settings, dApp approvals, WalletConnect wallet mode. No standalone backend. |
-| **Companion dApp (React + Vite)** | Hosted at [nixwalletdapp.vercel.app](https://nixwalletdapp.vercel.app) (or run locally from `dapp/`). Tests public ERC-20, native ETH → cETH, and FHERC20 flows; NixWallet owns all signing and approval UX. |
+| **Companion dApp (React + Vite)** | Hosted at [nixwalletdapp.vercel.app](https://nixwalletdapp.vercel.app) — **showcase for external dApps**: initiates `eth_*` provider calls; NixWallet owns connect, sign, typed data, tx approval, and Activity. Source in `dapp/`. |
 | **Encrypted vault** | Seed / imported keys stored in `chrome.storage.local` as **AES-GCM** ciphertext; key from **PBKDF2** + password. Keys live in memory only while unlocked. |
 | **Background service worker** | Auto-lock timer, `KEEP_ALIVE` on user activity, dApp permission enforcement, side-panel approval requests, and a small **JSON-RPC proxy** for dApp-related `eth_*` calls. |
 | **coFHE SDK (`@cofhe/sdk`)** | Client-side **encrypt** (e.g. amounts as encrypted inputs), **decryptForView** (show balances in UI), **decryptForTx** (threshold proofs for claims and txs). |
@@ -247,22 +249,29 @@ NixWallet fetches market prices from CoinGecko and applies a trust policy before
 - **WalletGuide submission**: use the prepared checklist in `extension/WALLETGUIDE_SUBMISSION.md` to submit in Reown dashboard and track listing status.
 - **Verification**: run the Explorer API checks from `extension/WALLETGUIDE_SUBMISSION.md` after submission to confirm discoverability.
 
-## Companion dApp
+## Companion dApp — showcase for external integrations
 
 **Live:** [https://nixwalletdapp.vercel.app](https://nixwalletdapp.vercel.app)
 
-The hosted companion dApp (source in `dapp/`) is an external test surface for NixWallet. It supports native ETH → cETH, default Sepolia USDT/USDC flows, and manual token fallback:
+NixWallet is designed as a **wallet provider** for third-party web apps, not only as a standalone UI. The companion dApp demonstrates that model end-to-end: it is a normal external site that **never stores private keys** and **never renders trusted transaction confirmations**. Instead it:
 
-- connect NixWallet and display wallet/account/network/provider build
-- switch supported networks through NixWallet
+1. Discovers NixWallet via **EIP-6963** (with injected-provider fallback).
+2. Calls standard JSON-RPC methods (`eth_requestAccounts`, `eth_sendTransaction`, `eth_signTypedData_v4`, `wallet_switchEthereumChain`, etc.).
+3. Relies on NixWallet’s **side-panel approval overlay** for every sensitive action (unlock required).
+4. Optionally pairs through **WalletConnect v2** when dApps use Reown instead of injection.
+
+Use it as a **reference implementation** when building your own Fhenix dApp: copy the provider wiring in `dapp/src/lib/nixProvider.ts` and contract helpers in `dapp/src/lib/contracts.ts`.
+
+**Flows exercised on testnets:**
+
+- connect, network switch, and account display
 - **native ETH → cETH** via `shieldNative` (Sepolia, Base Sepolia, Arbitrum Sepolia)
-- public ERC-20 transfer
-- wrapper creation, approval, and wrap/shield
-- confidential balance reveal through CoFHE typed-data approvals
-- confidential transfer with generated read-only encrypted payload
+- public ERC-20 transfer (default Sepolia USDC/USDT)
+- wrapper creation, approval, wrap/shield, confidential reveal/transfer
 - unwrap request and claim preparation/finalization
+- submissions recorded in NixWallet **Activity** (with `txDecode` labels where possible)
 
-Also listed in the extension **Discover** tab. For local development:
+Also linked from the extension **Discover** tab. For local development:
 
 ```bash
 cd dapp

@@ -666,7 +666,7 @@ export default function App() {
 
               <div className="grid md:grid-cols-2 gap-4">
                 <Panel icon={<Wallet />} title="Public Balance">
-                  <div className="text-2xl font-black">{publicBalance !== null ? formatAmountDisplay(publicBalance, token.decimals) : '--'} {token.symbol}</motion.div>
+                  <div className="text-2xl font-black">{publicBalance !== null ? formatAmountDisplay(publicBalance, token.decimals) : '--'} {token.symbol}</div>
                   <Info label="Token" value={token.address} mono />
                   <Info label="Decimals" value={String(token.decimals)} />
                 </Panel>

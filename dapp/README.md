@@ -2,9 +2,25 @@
 
 **Hosted:** [https://nixwalletdapp.vercel.app](https://nixwalletdapp.vercel.app)
 
-This is an external dApp for testing public ERC-20, native ETH → cETH, and confidential FHERC20 flows with NixWallet as the only signer.
+## Purpose — showcase how external dApps interact with NixWallet
 
-The dApp does not hold private keys and does not render trusted transaction approval UX. It initiates provider requests, then NixWallet shows the in-wallet confirmation modal.
+This project is **not** a second wallet. It is a **reference web dApp** that demonstrates how any external site can integrate with NixWallet the same way production apps integrate with MetaMask or WalletConnect wallets.
+
+| Responsibility | Companion dApp | NixWallet extension |
+|----------------|----------------|---------------------|
+| Private keys | Never | Yes (encrypted vault) |
+| Trusted approvals (connect / sign / send) | Never | Yes (side panel) |
+| Initiate provider RPC | Yes | No |
+| Execute confidential FHE flows | Initiates txs | Signs & approves |
+
+**What this proves for builders**
+
+- A dApp can stay **keyless** and still support Fhenix confidential flows (wrap, reveal, confidential transfer, unwrap, claim).
+- **EIP-6963 / EIP-1193** injection is enough for in-browser demos: discover NixWallet, connect, switch chain, send transactions.
+- **WalletConnect v2** works when your dApp uses Reown; NixWallet is WalletGuide-listed and handles sessions in-wallet.
+- External submissions appear in NixWallet **Activity** with decoded labels where `txDecode` can resolve calldata.
+
+If you are building a Fhenix dApp, fork or copy patterns from `src/lib/nixProvider.ts` and `src/lib/contracts.ts`—keep your UI thin and let NixWallet own trust.
 
 ## Setup
 
@@ -15,7 +31,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Load or reload the local NixWallet extension build before testing. Sensitive dApp interactions should open NixWallet in the Chrome side panel when Chrome allows the side panel API call from the request path.
+Load or reload the NixWallet extension build before testing. Sensitive dApp interactions should open NixWallet in the Chrome side panel when Chrome allows the side panel API call from the request path.
 
 The registry addresses are also built into the dApp as fallbacks so local testing works even before `.env.local` is created.
 

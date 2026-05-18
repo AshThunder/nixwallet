@@ -294,6 +294,22 @@
             color: var(--cyan); border: 1px solid rgba(34,211,238,0.3);
         }
 
+        .companion-panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-xl);
+            padding: clamp(1.5rem, 4vw, 2.5rem);
+            margin-top: 1rem;
+        }
+        .companion-panel ul {
+            margin: 1.25rem 0 0;
+            padding-left: 1.25rem;
+            color: var(--sub);
+            line-height: 1.7;
+        }
+        .companion-panel li { margin-bottom: 0.5rem; }
+        .companion-panel .panel-cta { margin-top: 1.5rem; display: flex; flex-wrap: wrap; gap: 0.75rem; }
+
         /* ── TECH STACK ────────────────────── */
         .tech-row {
             display: flex; flex-wrap: wrap; gap: 1rem;
@@ -466,6 +482,7 @@
         <svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
     </button>
     <div class="nav-links" id="nav-menu">
+        <a href="#companion-dapp">Companion dApp</a>
         <a href="#features">Features</a>
         <a href="#tech">Tech</a>
         <a href="#architecture">Architecture</a>
@@ -481,9 +498,10 @@
     <div class="hero-glow"></div>
     <div class="hero-content">
         <h1>NIX<span>WALLET</span></h1>
-        <p class="hero-sub">The <strong>confidential</strong> Chrome extension wallet for <strong>Fhenix</strong>: <strong>FHERC20</strong> and <strong>coFHE</strong> in Chrome’s side panel, with injected dApp approvals, WalletConnect wallet mode, and flows live across <strong>Ethereum Sepolia</strong>, <strong>Base Sepolia</strong>, and <strong>Arbitrum Sepolia</strong>.</p>
+        <p class="hero-sub">The <strong>confidential</strong> Chrome extension wallet for <strong>Fhenix</strong>: <strong>FHERC20</strong> and <strong>coFHE</strong> in Chrome’s side panel. External sites connect via <strong>EIP-1193 / EIP-6963</strong> or <strong>WalletConnect</strong>—try the hosted <a href="https://nixwalletdapp.vercel.app" target="_blank" rel="noopener" style="color: var(--cyan);">companion dApp</a> to see a full integration demo.</p>
         <div class="hero-cta">
             <a href="https://chromewebstore.google.com/detail/nixwallet/nkkaidapildbkjmnfeieepmejghgmipi" target="_blank" class="btn-primary">Install on Chrome</a>
+            <a href="https://nixwalletdapp.vercel.app" target="_blank" rel="noopener" class="btn-primary">Try Companion dApp</a>
             <a href="https://github.com/AshThunder/nixwallet" target="_blank" class="btn-ghost">View on GitHub</a>
             <a href="slides-journey.html" class="btn-ghost">Walkthrough slides</a>
             <a href="slides.html" class="btn-ghost">Tech slides</a>
@@ -493,13 +511,37 @@
     <div class="scroll-hint"><span></span></div>
 </section>
 
+<!-- COMPANION DAPP -->
+<section id="companion-dapp" style="background: var(--surface);">
+    <div class="container">
+        <div class="reveal">
+            <div class="section-label mono">External dApps</div>
+            <h2 class="section-title">Built for Sites<br> That Connect Wallets</h2>
+            <p class="section-desc">NixWallet is a <strong>provider</strong> any web dApp can call. The companion dApp at <strong>nixwalletdapp.vercel.app</strong> is a live reference: it never holds keys or trusted approvals—it initiates requests, and NixWallet confirms connect, sign, typed data, and transactions in the extension side panel.</p>
+            <div class="companion-panel">
+                <p style="color: var(--sub); line-height: 1.65; margin: 0;">How external dApps interact with NixWallet:</p>
+                <ul>
+                    <li><strong>EIP-6963 / injected</strong> — <code style="color: var(--cyan);">eth_requestAccounts</code>, <code style="color: var(--cyan);">eth_sendTransaction</code>, typed data, network switch.</li>
+                    <li><strong>WalletConnect v2</strong> — Reown pairing; NixWallet is WalletGuide-listed and handles sessions in-wallet.</li>
+                    <li><strong>Activity</strong> — wallet-native, injected, and WalletConnect submissions appear in one history feed.</li>
+                </ul>
+                <p style="color: var(--sub); line-height: 1.65; margin: 1.25rem 0 0;">The companion dApp demos public ERC-20, native ETH → cETH, wrap, confidential transfer, unwrap, and claim—copy the same pattern for your own Fhenix dApp.</p>
+                <div class="panel-cta">
+                    <a href="https://nixwalletdapp.vercel.app" target="_blank" rel="noopener" class="btn-primary">Open Companion dApp</a>
+                    <a href="https://github.com/AshThunder/nixwallet/tree/main/dapp" target="_blank" rel="noopener" class="btn-ghost">View dApp Source</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
 <!-- FEATURES -->
 <section id="features">
     <div class="container">
         <div class="reveal">
             <div class="section-label mono">Core Capabilities</div>
             <h2 class="section-title">Privacy Without<br> Compromise</h2>
-            <p class="section-desc">NixWallet wraps the full power of Fhenix's Fully Homomorphic Encryption into a seamless Chrome extension—giving you encrypted token management, multi-network support, dApp approvals, and local-first activity history.</p>
+            <p class="section-desc">NixWallet wraps Fhenix FHE into a Chrome extension—encrypted balances, multi-network testnets, in-wallet dApp approvals, and a companion dApp that shows how any external site can integrate.</p>
         </div>
 
         <div class="features-grid">
@@ -553,7 +595,7 @@
                     <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
                 </div>
                 <h3>Companion DApp</h3>
-                <p>Hosted at <a href="https://nixwalletdapp.vercel.app" target="_blank" rel="noopener">nixwalletdapp.vercel.app</a> — native ETH → cETH, USDT/USDC transfers, wrap, confidential reveal, encrypted transfers, unwrap, and claim flows.</p>
+                <p>Reference dApp for <strong>external sites</strong> connecting to NixWallet: initiates provider calls; NixWallet owns approvals. <a href="https://nixwalletdapp.vercel.app" target="_blank" rel="noopener">nixwalletdapp.vercel.app</a></p>
                 <span class="feature-badge mono">Wave 4</span>
             </div>
             <div class="feature-card reveal">
@@ -625,6 +667,7 @@
             <p class="sub" style="font-size: 1rem;">@ChrisGold__</p>
             <div class="creator-links">
                 <a href="https://chromewebstore.google.com/detail/nixwallet/nkkaidapildbkjmnfeieepmejghgmipi" target="_blank">Install on Chrome</a>
+                <a href="https://nixwalletdapp.vercel.app" target="_blank" rel="noopener">Companion dApp</a>
                 <a href="slides-journey.html">Walkthrough slides</a>
                 <a href="slides.html">Tech slides</a>
                 <a href="https://x.com/ChrisGold__" target="_blank">X / Twitter</a>
@@ -638,7 +681,7 @@
 
 <!-- FOOTER -->
 <footer>
-    <p class="mono">NixWallet &middot; 2026 &middot; Built on Fhenix &middot; <a href="slides-journey.html" style="color: var(--cyan); text-decoration: none;">Walkthrough</a> &middot; <a href="slides.html" style="color: var(--cyan); text-decoration: none;">Tech slides</a> &middot; <a href="/privacy" style="color: var(--cyan); text-decoration: none;">Privacy Policy</a></p>
+    <p class="mono">NixWallet &middot; 2026 &middot; Built on Fhenix &middot; <a href="https://nixwalletdapp.vercel.app" target="_blank" rel="noopener" style="color: var(--cyan); text-decoration: none;">Companion dApp</a> &middot; <a href="slides-journey.html" style="color: var(--cyan); text-decoration: none;">Walkthrough</a> &middot; <a href="slides.html" style="color: var(--cyan); text-decoration: none;">Tech slides</a> &middot; <a href="/privacy" style="color: var(--cyan); text-decoration: none;">Privacy Policy</a></p>
 </footer>
 
 <script>

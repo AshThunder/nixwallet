@@ -221,7 +221,8 @@
     <div class="slide active" data-slide="0">
         <div class="slide-label mono">Start · What is this?</div>
         <h1>NIX<span>WALLET</span></h1>
-        <p style="margin-top:1.25rem;"><strong>NixWallet</strong> is a <strong>self-custodial</strong> Chrome extension wallet for the <strong>Fhenix</strong> stack: it wraps everyday <strong>ERC-20s</strong> into <strong>FHERC20</strong> confidential assets, sends <strong>encrypted amounts</strong> with <strong>coFHE</strong>, and keeps <strong>shield → use → unwrap</strong> one click away in the <strong>side panel</strong>—with injected dApp approvals, WalletConnect wallet mode, and activity tracking across wallet and dApp transactions.</p>
+        <p style="margin-top:1.25rem;"><strong>NixWallet</strong> is a <strong>self-custodial</strong> Chrome extension wallet for the <strong>Fhenix</strong> stack: wrap <strong>ERC-20s</strong> and native ETH into confidential assets, send <strong>encrypted amounts</strong> with <strong>coFHE</strong>, and approve external sites from the <strong>side panel</strong>.</p>
+        <p style="margin-top:1rem;">The hosted <a href="https://nixwalletdapp.vercel.app" target="_blank" rel="noopener" style="color:var(--cyan)">companion dApp</a> shows how <strong>any web dApp</strong> can interact with NixWallet via injected provider or WalletConnect—without building its own signing UI.</p>
         <p style="margin-top:1rem;">This deck walks you through the product <strong>from first install to everyday use</strong>. One slide per step.</p>
     </div>
 
@@ -336,11 +337,11 @@
     <div class="slide" data-slide="11">
         <div class="slide-label mono">Extra · DApp approvals</div>
         <h2>DApp requests stay in <span style="color:var(--cyan)">NixWallet</span></h2>
-        <p>Open the companion dApp at <a href="https://nixwalletdapp.vercel.app" target="_blank" rel="noopener">nixwalletdapp.vercel.app</a>, click <strong>Connect NixWallet</strong>, and show that the trusted request appears in NixWallet — not inside the dApp.</p>
+        <p>The <a href="https://nixwalletdapp.vercel.app" target="_blank" rel="noopener">companion dApp</a> is a reference for <strong>external dApp developers</strong>: it calls NixWallet’s provider; NixWallet owns connect, sign, typed data, and transaction approval.</p>
         <ul class="step-list">
+            <li>Click <strong>Connect NixWallet</strong> — the approval appears in the extension, not in the dApp page.</li>
             <li><strong>Unlock first</strong> — approval is blocked while locked.</li>
-            <li><strong>Generate payloads</strong> — confidential transfers generate read-only encrypted values before send.</li>
-            <li><strong>Side panel</strong> — NixWallet attempts to open automatically for sensitive requests.</li>
+            <li><strong>Activity</strong> — submissions from the dApp show up in NixWallet’s Activity tab with decoded labels where possible.</li>
         </ul>
     </div>
 

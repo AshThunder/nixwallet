@@ -362,10 +362,11 @@
     <div class="slide" data-slide="8">
         <div class="slide-label mono">DApp approval model</div>
         <h2>Requests Stay In <span style="color:var(--cyan)">NixWallet</span></h2>
-        <p>The companion dApp initiates connect, transfer, approve, wrap, reveal, confidential transfer, unwrap, and claim actions — but NixWallet owns the trusted confirmation surface.</p>
+        <p>The <a href="https://nixwalletdapp.vercel.app" target="_blank" rel="noopener" style="color:var(--cyan)">companion dApp</a> is a live showcase for <strong>any external site</strong> integrating NixWallet: it initiates connect, transfer, approve, wrap, reveal, confidential transfer, unwrap, and claim — but never holds keys or trusted approvals.</p>
         <ul class="core-list">
+            <li><strong>Injected + WalletConnect</strong> — EIP-6963 discovery, <code>eth_*</code> RPC, and Reown sessions; NixWallet owns the confirmation surface.</li>
             <li><strong>Unlock gate</strong> — requests can be visible while locked, but approval is blocked until unlock.</li>
-            <li><strong>Activity</strong> — injected dApp and WalletConnect transaction submissions are recorded alongside wallet-native history.</li>
+            <li><strong>Activity</strong> — injected dApp and WalletConnect submissions recorded alongside wallet-native history.</li>
         </ul>
     </div>
 
@@ -384,6 +385,7 @@
         <p style="margin-bottom: 0.5rem;">Repo, demo, and contact.</p>
         <div class="link-row">
             <a href="https://chromewebstore.google.com/detail/nixwallet/nkkaidapildbkjmnfeieepmejghgmipi" target="_blank" class="primary">Install on Chrome</a>
+            <a href="https://nixwalletdapp.vercel.app" target="_blank" class="primary">Companion dApp</a>
             <a href="index.html" class="primary">Landing page</a>
             <a href="slides-journey.html">Walkthrough slides</a>
             <a href="https://github.com/AshThunder/nixwallet" target="_blank">GitHub</a>

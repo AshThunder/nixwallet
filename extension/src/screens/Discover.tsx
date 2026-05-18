@@ -33,7 +33,7 @@ const DAPPS: DApp[] = [
   },
   {
     name: 'Redact Money',
-    description: 'Privacy-focused financial tools on Fhenix testnet.',
+    description: 'Privacy-focused financial tools powered by Fhenix on EVM testnets.',
     url: 'https://test.redact.money/',
     icon: <Lock className="w-5 h-5 text-brand-cyan" />,
     category: 'FINANCE',

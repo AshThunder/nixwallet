@@ -969,7 +969,7 @@ function AboutMenu() {
             <div className="about-menu-col">
               <div className="about-menu-kicker">What it showcases</div>
               <ul className="about-menu-list">
-                <li>Native ETH → cETH via shieldNative on Sepolia testnets</li>
+                <li>Native ETH → cETH via shieldNative on supported host-chain testnets</li>
                 <li>ERC-20 public transfer, wrap, confidential send, unwrap, and claim</li>
                 <li>EIP-6963 / EIP-1193 discovery and WalletConnect v2 pairing</li>
                 <li>Transactions submitted here appear in NixWallet Activity</li>

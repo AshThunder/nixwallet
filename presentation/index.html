@@ -294,21 +294,124 @@
             color: var(--cyan); border: 1px solid rgba(34,211,238,0.3);
         }
 
-        .companion-panel {
-            background: var(--surface);
-            border: 1px solid var(--border);
+        .companion-landscape {
+            background: linear-gradient(145deg, rgb(15 23 42 / 0.95), rgb(2 6 23 / 0.98));
+            border: 1px solid rgb(34 211 238 / 0.28);
             border-radius: var(--radius-xl);
-            padding: clamp(1.5rem, 4vw, 2.5rem);
-            margin-top: 1rem;
+            margin-top: 1.25rem;
+            padding: clamp(1.25rem, 3vw, 2rem);
         }
-        .companion-panel ul {
-            margin: 1.25rem 0 0;
-            padding-left: 1.25rem;
+        .companion-landscape-top {
+            display: grid;
+            gap: 1.25rem 2rem;
+            grid-template-columns: 1fr;
+        }
+        @media (min-width: 900px) {
+            .companion-landscape-top { grid-template-columns: 1.05fr 1fr; align-items: start; }
+        }
+        .companion-kicker {
+            color: var(--cyan);
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.22em;
+            margin-bottom: 0.65rem;
+            text-transform: uppercase;
+        }
+        .companion-intro h3 {
+            font-size: clamp(1.15rem, 3vw, 1.45rem);
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            line-height: 1.2;
+            margin: 0 0 0.75rem;
+        }
+        .companion-intro p {
             color: var(--sub);
-            line-height: 1.7;
+            font-size: clamp(0.92rem, 2.5vw, 1rem);
+            line-height: 1.65;
+            margin: 0 0 0.65rem;
         }
-        .companion-panel li { margin-bottom: 0.5rem; }
-        .companion-panel .panel-cta { margin-top: 1.5rem; display: flex; flex-wrap: wrap; gap: 0.75rem; }
+        .companion-intro p strong { color: var(--white); }
+        .companion-intro a { color: var(--cyan); font-weight: 600; }
+        .companion-trust {
+            border-left: 3px solid var(--cyan);
+            color: var(--muted);
+            font-size: 0.85rem;
+            line-height: 1.55;
+            margin: 0.75rem 0 0;
+            padding-left: 0.85rem;
+        }
+        .companion-grid {
+            display: grid;
+            gap: 1rem;
+            grid-template-columns: 1fr;
+        }
+        @media (min-width: 640px) {
+            .companion-grid { grid-template-columns: 1fr 1fr; }
+        }
+        .companion-card {
+            background: rgb(2 6 23 / 0.65);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 1.1rem 1.15rem;
+        }
+        .companion-card h4 {
+            color: var(--white);
+            font-size: 0.72rem;
+            font-weight: 800;
+            letter-spacing: 0.14em;
+            margin: 0 0 0.65rem;
+            text-transform: uppercase;
+        }
+        .companion-card ul {
+            color: var(--sub);
+            font-size: 0.86rem;
+            line-height: 1.55;
+            margin: 0;
+            padding-left: 1.1rem;
+        }
+        .companion-card li + li { margin-top: 0.4rem; }
+        .companion-card code {
+            color: var(--cyan);
+            font-family: ui-monospace, monospace;
+            font-size: 0.8em;
+        }
+        .companion-cta-row {
+            border-top: 1px solid var(--border);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-top: 1.35rem;
+            padding-top: 1.25rem;
+        }
+        .companion-cta-row a {
+            padding: 0.85rem 1.35rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-decoration: none;
+            text-transform: uppercase;
+            border-radius: var(--radius-md);
+            transition: background-color 0.2s, border-color 0.2s, transform 0.2s;
+        }
+        .btn-companion-primary {
+            background: var(--cyan);
+            border: 1px solid var(--cyan);
+            color: var(--bg);
+        }
+        .btn-companion-primary:hover {
+            background: var(--cyan-active);
+            border-color: var(--cyan-active);
+            transform: translateY(-2px);
+        }
+        .btn-companion-secondary {
+            background: #fff;
+            border: 1px solid #fff;
+            color: var(--bg);
+        }
+        .btn-companion-secondary:hover {
+            border-color: var(--cyan);
+            transform: translateY(-2px);
+        }
 
         /* ── TECH STACK ────────────────────── */
         .tech-row {
@@ -517,18 +620,46 @@
         <div class="reveal">
             <div class="section-label mono">External dApps</div>
             <h2 class="section-title">Built for Sites<br> That Connect Wallets</h2>
-            <p class="section-desc">NixWallet is a <strong>provider</strong> any web dApp can call. The companion dApp at <strong>nixwalletdapp.vercel.app</strong> is a live reference: it never holds keys or trusted approvals—it initiates requests, and NixWallet confirms connect, sign, typed data, and transactions in the extension side panel.</p>
-            <div class="companion-panel">
-                <p style="color: var(--sub); line-height: 1.65; margin: 0;">How external dApps interact with NixWallet:</p>
-                <ul>
-                    <li><strong>EIP-6963 / injected</strong> — <code style="color: var(--cyan);">eth_requestAccounts</code>, <code style="color: var(--cyan);">eth_sendTransaction</code>, typed data, network switch.</li>
-                    <li><strong>WalletConnect v2</strong> — Reown pairing; NixWallet is WalletGuide-listed and handles sessions in-wallet.</li>
-                    <li><strong>Activity</strong> — wallet-native, injected, and WalletConnect submissions appear in one history feed.</li>
-                </ul>
-                <p style="color: var(--sub); line-height: 1.65; margin: 1.25rem 0 0;">The companion dApp demos public ERC-20, native ETH → cETH, wrap, confidential transfer, unwrap, and claim—copy the same pattern for your own Fhenix dApp.</p>
-                <div class="panel-cta">
-                    <a href="https://nixwalletdapp.vercel.app" target="_blank" rel="noopener" class="btn-primary">Open Companion dApp</a>
-                    <a href="https://github.com/AshThunder/nixwallet/tree/main/dapp" target="_blank" rel="noopener" class="btn-ghost">View dApp Source</a>
+            <p class="section-desc">NixWallet is built for the web: any site can connect through injection or WalletConnect while users approve everything in the extension side panel.</p>
+            <div class="companion-landscape">
+                <div class="companion-landscape-top">
+                    <div class="companion-intro">
+                        <div class="companion-kicker">Live showcase</div>
+                        <h3>A reference dApp that showcases NixWallet integration</h3>
+                        <p>
+                            The hosted companion at
+                            <a href="https://nixwalletdapp.vercel.app" target="_blank" rel="noopener">nixwalletdapp.vercel.app</a>
+                            <strong>showcases</strong> how external developers wire up NixWallet—without shipping a second wallet UI.
+                            Use it to demo connect, wrap, confidential transfer, unwrap, and claim on Ethereum Sepolia, Base Sepolia, and Arbitrum Sepolia with Fhenix FHE.
+                        </p>
+                        <p class="companion-trust">
+                            The companion dApp never stores private keys or shows trusted transaction modals. It only calls the provider; NixWallet owns every approval.
+                        </p>
+                    </div>
+                    <div class="companion-grid">
+                        <div class="companion-card">
+                            <h4>What it showcases</h4>
+                            <ul>
+                                <li>Native ETH → cETH (<code>shieldNative</code>)</li>
+                                <li>Public ERC-20 transfer, wrap, and unwrap</li>
+                                <li>Confidential FHERC20 send and claim flows</li>
+                                <li>Activity from this site in NixWallet history</li>
+                            </ul>
+                        </div>
+                        <div class="companion-card">
+                            <h4>How sites connect</h4>
+                            <ul>
+                                <li><strong>EIP-6963</strong> — <code>eth_requestAccounts</code>, <code>eth_sendTransaction</code>, typed data</li>
+                                <li><strong>WalletConnect v2</strong> — Reown pairing; WalletGuide-listed</li>
+                                <li><strong>Side panel</strong> — connect / sign / send confirmed in-wallet</li>
+                                <li><strong>Open source</strong> — copy patterns from <code>dapp/</code> in the repo</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="companion-cta-row">
+                    <a href="https://nixwalletdapp.vercel.app" target="_blank" rel="noopener" class="btn-companion-primary">Open Companion dApp</a>
+                    <a href="https://github.com/AshThunder/nixwallet/tree/main/dapp" target="_blank" rel="noopener" class="btn-companion-secondary">View dApp Source</a>
                 </div>
             </div>
         </div>

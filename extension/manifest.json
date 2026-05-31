@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "NixWallet",
   "version": "1.0.5",
-  "description": "Confidential Fhenix wallet. Wrap ETH/ERC-20 into confidential tokens, private sends, and encrypted balances on Ethereum, Base, and Arbitrum Sepolia.",
+  "description": "Self-custodial FHE wallet. Wrap ERC-20s into confidential tokens, private sends, NixBot assistant, and dApp support on EVM testnets.",
   "icons": {
     "16": "branding_icon16.png",
     "32": "branding_icon32.png",

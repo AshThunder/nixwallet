@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "NixWallet",
-  "version": "1.0.4",
-  "description": "Confidential crypto wallet powered by Fhenix FHE. Wrap native ETH and ERC-20s into cTokens, send privately, and manage encrypted balances on Sepolia testnets.",
+  "version": "1.0.5",
+  "description": "Confidential Fhenix wallet. Wrap ETH/ERC-20 into confidential tokens, private sends, and encrypted balances on Ethereum, Base, and Arbitrum Sepolia.",
   "icons": {
     "16": "branding_icon16.png",
     "32": "branding_icon32.png",
@@ -27,13 +27,23 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["src/content.ts"],
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "src/content.ts"
+      ],
       "run_at": "document_start"
     }
   ],
-  "permissions": ["storage", "sidePanel"],
-  "host_permissions": ["<all_urls>"],
+  "permissions": [
+    "storage",
+    "sidePanel",
+    "notifications"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
   },
@@ -45,8 +55,12 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["src/injected.js"],
-      "matches": ["<all_urls>"]
+      "resources": [
+        "src/injected.js"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
     }
   ]
 }

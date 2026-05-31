@@ -40,6 +40,7 @@ const SENSITIVE_PROVIDER_METHODS = new Set([
   'eth_signTypedData_v4',
   'eth_sendTransaction',
   'wallet_switchEthereumChain',
+  'wallet_addEthereumChain',
 ]);
 
 interface SessionVaultLike {
@@ -98,6 +99,18 @@ chrome.runtime.onMessage.addListener((message: { type?: string; payload?: Record
   }
 
   if (message.type === 'KEEP_ALIVE') {
+    sendResponse({ ok: true });
+    return true;
+  }
+  if (message.type === 'TRANSACTION_SUCCESS_NOTIFICATION' && message.payload) {
+    const { title, message: bodyText } = message.payload as { title?: string; message?: string; hash?: string };
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl: '/branding_icon128.png',
+      title: title || 'NixWallet Transaction',
+      message: bodyText || 'Transaction confirmed.',
+      priority: 2,
+    });
     sendResponse({ ok: true });
     return true;
   }
@@ -286,7 +299,7 @@ async function getActiveProviderAccount(): Promise<string> {
   return getAccountByIndex(cached.mnemonic, idx).address;
 }
 
-async function handleSensitiveRpcRequest(method: string, params: unknown[] | undefined, origin: string) {
+async function handleSensitiveRpcRequest(method: string, params: unknown[] | undefined, origin: string, requestId?: number) {
   const permission = await getDappPermission(origin);
   if (!permission && method !== 'eth_requestAccounts') {
     throw new Error('Origin not connected. Call eth_requestAccounts first.');
@@ -347,13 +360,15 @@ async function handleSensitiveRpcRequest(method: string, params: unknown[] | und
         network,
         address: signer.address,
         source: 'dapp',
+        requestId: typeof requestId === 'number' ? `${origin}:${requestId}` : origin,
         origin,
       });
       return sent.hash;
     }
-    case 'wallet_switchEthereumChain': {
+    case 'wallet_switchEthereumChain':
+    case 'wallet_addEthereumChain': {
       const requested = (params?.[0] as { chainId?: string } | undefined)?.chainId;
-      if (!requested) throw new Error('wallet_switchEthereumChain requires chainId');
+      if (!requested) throw new Error(`${method} requires chainId`);
       const parsed = Number.parseInt(requested, 16);
       if (!Number.isFinite(parsed)) throw new Error('Invalid chainId');
       const target = getNetworkByChainId(parsed);
@@ -391,7 +406,7 @@ async function handleRpcRequest(payload: { id?: number; method: string; params?:
       chainId: network.chainId,
     });
     if (!approved) throw new Error('User rejected request');
-    return handleSensitiveRpcRequest(method, params, origin);
+    return handleSensitiveRpcRequest(method, params, origin, payload.id);
   }
 
   // 1. Handle non-sensitive provider methods
@@ -408,17 +423,6 @@ async function handleRpcRequest(payload: { id?: number; method: string; params?:
 
     case 'net_version':
       return String(network.chainId);
-
-    case 'wallet_addEthereumChain': {
-      const requested = (params?.[0] as { chainId?: string } | undefined)?.chainId;
-      if (!requested) throw new Error('wallet_addEthereumChain requires chainId');
-      const parsed = Number.parseInt(requested, 16);
-      const target = Number.isFinite(parsed) ? getNetworkByChainId(parsed) : null;
-      if (!target) {
-        throw new Error(`Requested chain ${requested} is not supported by NixWallet`);
-      }
-      return null;
-    }
 
     case 'eth_blockNumber':
     case 'eth_getBalance':

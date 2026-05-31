@@ -1,22 +1,31 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NixWallet — Presentation</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
     <style>
-        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
         :root {
             --bg: #020617;
             --surface: #0f172a;
             --surface-elevated: #1e293b;
-            --border: rgba(255,255,255,0.08);
+            --border: rgba(255, 255, 255, 0.08);
             --cyan: #22d3ee;
             --cyan-active: #06b6d4;
-            --cyan-dim: rgba(34,211,238,0.12);
-            --cyan-glow: rgba(34,211,238,0.35);
+            --cyan-dim: rgba(34, 211, 238, 0.12);
+            --cyan-glow: rgba(34, 211, 238, 0.35);
             --white: #f8fafc;
             --sub: #94a3b8;
             --muted: #475569;
@@ -31,187 +40,329 @@
             color: var(--white);
             font-family: 'Inter', sans-serif;
             overflow: hidden;
-            width: 100vw; height: 100vh;
+            width: 100vw;
+            height: 100vh;
             cursor: default;
             user-select: none;
         }
-        .mono { font-family: 'JetBrains Mono', monospace; }
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
 
         /* ── Slide Container ─────────────── */
         #deck {
             position: relative;
-            width: 100%; height: 100%;
+            width: 100%;
+            height: 100%;
         }
+
         .slide {
-            position: absolute; inset: 0;
-            display: flex; flex-direction: column;
-            align-items: center; justify-content: center;
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
             padding: 3.75rem 5.5rem;
             opacity: 0;
             transform: translateX(60px);
-            transition: opacity 0.5s cubic-bezier(.16,1,.3,1), transform 0.5s cubic-bezier(.16,1,.3,1);
+            transition: opacity 0.5s cubic-bezier(.16, 1, .3, 1), transform 0.5s cubic-bezier(.16, 1, .3, 1);
             pointer-events: none;
             z-index: 0;
         }
+
         .slide.active {
-            opacity: 1; transform: translateX(0);
-            pointer-events: auto; z-index: 1;
+            opacity: 1;
+            transform: translateX(0);
+            pointer-events: auto;
+            z-index: 1;
         }
+
         .slide.exiting {
-            opacity: 0; transform: translateX(-60px);
+            opacity: 0;
+            transform: translateX(-60px);
         }
 
         /* ── Global Glow ─────────────────── */
-        .glow { display: none; }
-        .glow-1 { top: -200px; right: -200px; }
-        .glow-2 { bottom: -200px; left: -200px; opacity: 0.15; }
+        .glow {
+            display: none;
+        }
+
+        .glow-1 {
+            top: -200px;
+            right: -200px;
+        }
+
+        .glow-2 {
+            bottom: -200px;
+            left: -200px;
+            opacity: 0.15;
+        }
 
         /* ── Slide Typography ────────────── */
         .slide-label {
-            font-size: 1rem; font-weight: 700;
-            letter-spacing: 0.3em; text-transform: uppercase;
-            color: var(--cyan); margin-bottom: 1.5rem;
-        }
-        .slide h1 {
-            font-size: clamp(3rem, 8vw, 6rem);
-            font-weight: 700; letter-spacing: -0.04em;
-            text-transform: uppercase; line-height: 1;
-            text-align: center;
-        }
-        .slide h1 span { color: var(--cyan); }
-        .slide h2 {
-            font-size: clamp(2rem, 5vw, 3.5rem);
-            font-weight: 700; letter-spacing: -0.03em;
-            line-height: 1.1; text-align: center;
+            font-size: 1rem;
+            font-weight: 700;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            color: var(--cyan);
             margin-bottom: 1.5rem;
         }
+
+        .slide h1 {
+            font-size: clamp(3rem, 8vw, 6rem);
+            font-weight: 700;
+            letter-spacing: -0.04em;
+            text-transform: uppercase;
+            line-height: 1;
+            text-align: center;
+        }
+
+        .slide h1 span {
+            color: var(--cyan);
+        }
+
+        .slide h2 {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            line-height: 1.1;
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
         .slide p {
-            font-size: 1.2rem; color: var(--sub);
-            max-width: 700px; text-align: center;
+            font-size: 1.2rem;
+            color: var(--sub);
+            max-width: 700px;
+            text-align: center;
             line-height: 1.7;
         }
-        .slide p strong { color: var(--white); }
+
+        .slide p strong {
+            color: var(--white);
+        }
 
         .slide .core-list {
-            margin-top: 1.75rem; max-width: 640px; text-align: left;
+            margin-top: 1.75rem;
+            max-width: 640px;
+            text-align: left;
             list-style: none;
         }
+
         .slide .core-list li {
-            font-size: 1.05rem; color: var(--sub); line-height: 1.65;
-            padding: 0.65rem 0; padding-left: 1.25rem;
+            font-size: 1.05rem;
+            color: var(--sub);
+            line-height: 1.65;
+            padding: 0.65rem 0;
+            padding-left: 1.25rem;
             border-left: 2px solid var(--cyan-dim);
             margin-bottom: 0.35rem;
         }
-        .slide .core-list li strong { color: var(--white); }
+
+        .slide .core-list li strong {
+            color: var(--white);
+        }
 
         /* ── Feature List ────────────────── */
         .feature-list {
-            display: grid; grid-template-columns: 1fr 1fr;
-            gap: 1rem; margin-top: 2rem;
-            max-width: 800px; width: 100%;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 2rem;
+            max-width: 800px;
+            width: 100%;
         }
+
         .fl-item {
-            display: flex; align-items: center; gap: 1rem;
-            background: var(--surface); border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
             border-radius: var(--radius-xl);
             padding: 1.2rem 1.5rem;
             transition: border-color 0.3s;
         }
-        .fl-item:hover { border-color: rgba(34,211,238,0.3); }
-        .fl-dot {
-            width: 10px; height: 10px; flex-shrink: 0;
-            background: var(--cyan); border-radius: 2px;
+
+        .fl-item:hover {
+            border-color: rgba(34, 211, 238, 0.3);
         }
-        .fl-dot.soon { background: var(--muted); }
-        .fl-item span { font-size: 0.95rem; font-weight: 600; }
+
+        .fl-dot {
+            width: 10px;
+            height: 10px;
+            flex-shrink: 0;
+            background: var(--cyan);
+            border-radius: 2px;
+        }
+
+        .fl-dot.soon {
+            background: var(--muted);
+        }
+
+        .fl-item span {
+            font-size: 0.95rem;
+            font-weight: 600;
+        }
+
         .fl-badge {
-            margin-left: auto; font-size: 0.6rem; font-weight: 700;
-            text-transform: uppercase; letter-spacing: 0.1em;
-            color: var(--muted); border: 1px solid var(--border);
+            margin-left: auto;
+            font-size: 0.6rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--muted);
+            border: 1px solid var(--border);
             padding: 0.2rem 0.5rem;
         }
 
         /* ── Tech Pills ──────────────────── */
         .pill-row {
-            display: flex; flex-wrap: wrap; gap: 0.8rem;
-            justify-content: center; margin-top: 2rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            justify-content: center;
+            margin-top: 2rem;
             max-width: 700px;
         }
+
         .pill {
             padding: 0.7rem 1.3rem;
-            background: var(--surface); border: 1px solid var(--border);
+            background: var(--surface);
+            border: 1px solid var(--border);
             border-radius: var(--radius-lg);
-            font-size: 0.85rem; font-weight: 600;
+            font-size: 0.85rem;
+            font-weight: 600;
         }
 
         /* ── Stats Row ───────────────────── */
         .stats {
-            display: flex; gap: 1px; margin-top: 2.5rem;
-            background: var(--border); border: 1px solid var(--border);
+            display: flex;
+            gap: 1px;
+            margin-top: 2.5rem;
+            background: var(--border);
+            border: 1px solid var(--border);
         }
+
         .stat {
-            background: var(--surface); padding: 2rem 3rem;
+            background: var(--surface);
+            padding: 2rem 3rem;
             text-align: center;
         }
+
         .stat .num {
-            font-size: 2.5rem; font-weight: 900;
-            color: var(--cyan); letter-spacing: -0.04em; line-height: 1;
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: var(--cyan);
+            letter-spacing: -0.04em;
+            line-height: 1;
         }
+
         .stat .lbl {
-            font-size: 0.7rem; font-weight: 600;
-            text-transform: uppercase; letter-spacing: 0.15em;
-            color: var(--sub); margin-top: 0.4rem;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--sub);
+            margin-top: 0.4rem;
         }
 
         /* ── Quote ───────────────────────── */
         .quote {
-            font-size: 1.6rem; font-weight: 300;
-            font-style: italic; color: var(--sub);
-            max-width: 650px; text-align: center;
-            line-height: 1.7; border-left: 3px solid var(--cyan);
-            padding-left: 2rem; text-align: left;
+            font-size: 1.6rem;
+            font-weight: 300;
+            font-style: italic;
+            color: var(--sub);
+            max-width: 650px;
+            text-align: center;
+            line-height: 1.7;
+            border-left: 3px solid var(--cyan);
+            padding-left: 2rem;
+            text-align: left;
         }
-        .quote strong { color: var(--cyan); font-style: normal; font-weight: 700; }
+
+        .quote strong {
+            color: var(--cyan);
+            font-style: normal;
+            font-weight: 700;
+        }
 
         /* ── Links ────────────────────────── */
         .link-row {
-            display: flex; gap: 1rem; margin-top: 2rem;
-            flex-wrap: wrap; justify-content: center;
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+            flex-wrap: wrap;
+            justify-content: center;
         }
+
         .link-row a {
-            padding: 0.8rem 1.5rem; font-size: 0.85rem; font-weight: 700;
-            text-transform: uppercase; letter-spacing: 0.08em;
-            text-decoration: none; transition: background-color 0.2s, border-color 0.2s, color 0.2s, transform 0.2s;
-            border: 1px solid var(--border); color: var(--white); background: var(--surface);
+            padding: 0.8rem 1.5rem;
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            text-decoration: none;
+            transition: background-color 0.2s, border-color 0.2s, color 0.2s, transform 0.2s;
+            border: 1px solid var(--border);
+            color: var(--white);
+            background: var(--surface);
             border-radius: var(--radius-md);
         }
-        .link-row a:hover { border-color: var(--cyan); color: var(--cyan); background: var(--surface-elevated); }
+
+        .link-row a:hover {
+            border-color: var(--cyan);
+            color: var(--cyan);
+            background: var(--surface-elevated);
+        }
+
         .link-row a.primary {
-            background: var(--cyan); color: var(--bg); border-color: var(--cyan);
+            background: var(--cyan);
+            color: var(--bg);
+            border-color: var(--cyan);
             box-shadow: none;
         }
-        .link-row a.primary:hover { background: var(--cyan-active); border-color: var(--cyan-active); color: var(--bg); }
+
+        .link-row a.primary:hover {
+            background: var(--cyan-active);
+            border-color: var(--cyan-active);
+            color: var(--bg);
+        }
 
         /* ── Progress Bar ────────────────── */
         #progress {
-            position: fixed; bottom: 0; left: 0;
-            height: 3px; background: var(--cyan);
-            transition: width 0.4s ease; z-index: 100;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            background: var(--cyan);
+            transition: width 0.4s ease;
+            z-index: 100;
             box-shadow: 0 0 10px var(--cyan-glow);
         }
 
         /* ── Slide Counter ───────────────── */
         #counter {
-            position: fixed; bottom: 1.5rem; right: 2rem;
-            font-size: 0.75rem; color: var(--muted);
-            letter-spacing: 0.1em; z-index: 100;
+            position: fixed;
+            bottom: 1.5rem;
+            right: 2rem;
+            font-size: 0.75rem;
+            color: var(--muted);
+            letter-spacing: 0.1em;
+            z-index: 100;
         }
 
         /* ── Nav Hint ────────────────────── */
         #nav-hint {
-            position: fixed; bottom: 1.5rem; left: 2rem;
-            font-size: 0.65rem; color: var(--muted);
-            letter-spacing: 0.1em; text-transform: uppercase;
+            position: fixed;
+            bottom: 1.5rem;
+            left: 2rem;
+            font-size: 0.65rem;
+            color: var(--muted);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
             z-index: 100;
         }
 
@@ -233,225 +384,276 @@
             justify-content: center;
             transition: background 0.2s, border-color 0.2s, opacity 0.2s, box-shadow 0.2s;
             padding: 0;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
         }
+
         .slide-nav:hover:not(:disabled) {
             border-color: var(--cyan);
             background: var(--surface-elevated);
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
         }
+
         .slide-nav:focus-visible {
             outline: 2px solid var(--cyan);
             outline-offset: 3px;
         }
+
         .slide-nav:disabled {
             opacity: 0.22;
             cursor: not-allowed;
         }
-        .slide-nav-prev { left: clamp(0.75rem, 2vw, 1.5rem); }
-        .slide-nav-next { right: clamp(0.75rem, 2vw, 1.5rem); }
+
+        .slide-nav-prev {
+            left: clamp(0.75rem, 2vw, 1.5rem);
+        }
+
+        .slide-nav-next {
+            right: clamp(0.75rem, 2vw, 1.5rem);
+        }
+
         .slide-nav svg {
             width: 1.35rem;
             height: 1.35rem;
         }
     </style>
 </head>
+
 <body>
 
-<div class="glow glow-1"></div>
-<div class="glow glow-2"></div>
+    <div class="glow glow-1"></div>
+    <div class="glow glow-2"></div>
 
-<div id="deck">
+    <div id="deck">
 
-    <!-- 1: Title -->
-    <div class="slide active" data-slide="0">
-        <div class="slide-label mono">Chrome Extension Wallet</div>
-        <h1>NIX<span>WALLET</span></h1>
-        <p style="margin-top: 1.5rem;">Self-custodial wallet for <strong>FHERC20</strong> confidential tokens — powered by <strong>Fhenix</strong> and <strong>coFHE</strong>.</p>
-    </div>
+        <!-- 1: Title -->
+        <div class="slide active" data-slide="0">
+            <div class="slide-label mono">Chrome Extension Wallet</div>
+            <h1>NIX<span>WALLET</span></h1>
+            <p style="margin-top: 1.5rem;">Self-custodial wallet for <strong>FHERC20</strong> confidential tokens —
+                powered by <strong>Fhenix</strong> and <strong>coFHE</strong>.</p>
+        </div>
 
-    <!-- 2: Why we built this -->
-    <div class="slide" data-slide="1">
-        <div class="slide-label mono">Why we built this</div>
-        <h2>Privacy Starts At The <span style="color:var(--cyan)">Wallet</span></h2>
-        <p>Fhenix makes it possible to run wallet logic on <strong>encrypted balances</strong>, but someone still had to ship the <strong>browser experience</strong>: onboarding, keys, wrap/unwrap, dApp approvals, and WalletConnect wallet mode.</p>
-        <ul class="core-list">
-            <li><strong>Gap</strong> — Standard wallets only move plaintext ERC-20s; every amount is a billboard on a public chain.</li>
-            <li><strong>Goal</strong> — One Chrome flow that feels like a normal EVM wallet while speaking <strong>FHERC20</strong> and <strong>coFHE</strong>.</li>
-            <li><strong>Principle</strong> — Self-custodial, local-first, <strong>no wallet backend</strong> — only your RPC and the chain.</li>
-        </ul>
-    </div>
+        <!-- 2: Why we built this -->
+        <div class="slide" data-slide="1">
+            <div class="slide-label mono">Why we built this</div>
+            <h2>Privacy Starts At The <span style="color:var(--cyan)">Wallet</span></h2>
+            <p>Fhenix makes it possible to run wallet logic on <strong>encrypted balances</strong>, but someone still
+                had to ship the <strong>wallet experience</strong>: onboarding, keys, wrap/unwrap, confidential
+                transactions, dApp approvals,
+                WalletConnect, etc.</p>
+            <ul class="core-list">
+                <li><strong>Gap</strong> — Standard wallets only move plaintext ERC-20s; every amount is a billboard on
+                    a public chain.</li>
+                <li><strong>Goal</strong> — A wallet flow that feels like a normal EVM wallet while speaking
+                    <strong>FHERC20</strong> and <strong>coFHE</strong>.
+                </li>
+                <li><strong>Principle</strong> — Self-custodial, local-first, <strong>no wallet backend</strong> — only
+                    your RPC and the chain.</li>
+            </ul>
+        </div>
 
-    <!-- 3: The problem (public ledger) -->
-    <div class="slide" data-slide="2">
-        <div class="slide-label mono">Core part · Public amounts</div>
-        <h2>Public Chains, <span style="color:var(--cyan)">Public Amounts</span></h2>
-        <p>On L1, <strong>addresses and tx metadata</strong> are visible like any EVM transaction. For normal ERC-20s, <strong>transfer amounts</strong> and balances are easy to read from logs and explorers.</p>
-        <ul class="core-list">
-            <li>NixWallet does <strong>not</strong> promise full anonymity — it targets <strong>amount / balance confidentiality</strong> for the confidential token leg.</li>
-            <li>Users still need a clear story: <strong>what is encrypted</strong> vs <strong>what stays public</strong>.</li>
-        </ul>
-    </div>
+        <!-- 3: The problem (public ledger) -->
+        <div class="slide" data-slide="2">
+            <div class="slide-label mono">Core part · Public amounts</div>
+            <h2>Public Chains, <span style="color:var(--cyan)">Public Amounts</span></h2>
+            <p>On L1, <strong>addresses and tx metadata</strong> are visible like any EVM transaction. For normal
+                ERC-20s, <strong>transfer amounts</strong> and balances are easy to read from logs and explorers.</p>
+            <ul class="core-list">
+                <li>NixWallet does <strong>not</strong> promise full anonymity — it targets <strong>amount / balance
+                        confidentiality</strong> for the confidential token leg.</li>
+                <li>Users still need a clear story: <strong>what is encrypted</strong> vs <strong>what stays
+                        public</strong>.</li>
+            </ul>
+        </div>
 
-    <!-- 4: FHE + FHERC20 -->
-    <div class="slide" data-slide="3">
-        <div class="slide-label mono">Core part · FHE &amp; FHERC20</div>
-        <h2>FHE &amp; <span style="color:var(--cyan)">FHERC20</span></h2>
-        <p><strong>Fully Homomorphic Encryption</strong> lets contracts update token state from <strong>ciphertext</strong> — observers do not see confidential balances and transfer amounts the same way as on a classic ERC-20.</p>
-        <ul class="core-list">
-            <li><strong>Wrap</strong> — Lock an underlying ERC-20 and hold balance as encrypted FHERC20 (e.g. USDC → cUSDC).</li>
-            <li><strong>coFHE</strong> — Client encrypts inputs; <strong>decryptForView</strong> for UI; <strong>decryptForTx</strong> for proofs the contract accepts.</li>
-        </ul>
-    </div>
+        <!-- 4: FHE + FHERC20 -->
+        <div class="slide" data-slide="3">
+            <div class="slide-label mono">Core part · FHE &amp; FHERC20</div>
+            <h2>FHE &amp; <span style="color:var(--cyan)">FHERC20</span></h2>
+            <p><strong>Fully Homomorphic Encryption</strong> lets contracts update token state from
+                <strong>ciphertext</strong> — observers do not see confidential balances and transfer amounts the same
+                way as on a classic ERC-20.
+            </p>
+            <ul class="core-list">
+                <li><strong>Wrap</strong> — Lock an underlying ERC-20 and hold balance as encrypted FHERC20 (e.g. USDC →
+                    cUSDC).</li>
+                <li><strong>coFHE</strong> — Client encrypts inputs; <strong>decryptForView</strong> for UI;
+                    <strong>decryptForTx</strong> for proofs the contract accepts.
+                </li>
+            </ul>
+        </div>
 
-    <!-- 5: Lifecycle: shield → use → unwrap -->
-    <div class="slide" data-slide="4">
-        <div class="slide-label mono">Core part · Lifecycle</div>
-        <h2>Shield → Use → <span style="color:var(--cyan)">Unwrap</span></h2>
-        <p>Everything in the product maps to three pillars users can demo end-to-end on testnet.</p>
-        <ul class="core-list">
-            <li><strong>Shield</strong> — Approve the wrapper, call <strong>shield</strong>, receive confidential balance.</li>
-            <li><strong>Use</strong> — <strong>confidentialTransfer</strong> with an encrypted amount; reveal balance in UI when you choose.</li>
-            <li><strong>Unwrap</strong> — <strong>unshield</strong>, then <strong>claimUnshielded</strong> / <strong>claimUnshieldedBatch</strong> to recover underlying ERC-20.</li>
-        </ul>
-    </div>
+        <!-- 5: Lifecycle: shield → use → unwrap -->
+        <div class="slide" data-slide="4">
+            <div class="slide-label mono">Core part · Lifecycle</div>
+            <h2>Shield → Use → <span style="color:var(--cyan)">Unwrap</span></h2>
+            <p>Everything in the product maps to three pillars users can demo end-to-end on testnet.</p>
+            <ul class="core-list">
+                <li><strong>Shield</strong> — Approve the wrapper, call <strong>shield</strong>, receive confidential
+                    balance.</li>
+                <li><strong>Use</strong> — <strong>confidentialTransfer</strong> with an encrypted amount; reveal
+                    balance in UI when you choose.</li>
+                <li><strong>Unwrap</strong> — <strong>unshield</strong>, then <strong>claimUnshielded</strong> /
+                    <strong>claimUnshieldedBatch</strong> to recover underlying ERC-20.
+                </li>
+            </ul>
+        </div>
 
-    <!-- 6: On-chain registry -->
-    <div class="slide" data-slide="5">
-        <div class="slide-label mono">Core part · Registry</div>
-        <h2>Wrapper <span style="color:var(--cyan)">Registry</span></h2>
-        <p><strong>FHERC20WrapperRegistry</strong> is an on-chain factory: the <strong>first</strong> user to wrap a new ERC-20 pays deployment gas for that token’s wrapper; <strong>everyone else reuses</strong> the same contract.</p>
-        <ul class="core-list">
-            <li>No manual “deploy my confidential token” step for each user.</li>
-            <li>Hardhat-deployed Solidity in-repo — same version control as the extension.</li>
-        </ul>
-    </div>
+        <!-- 6: On-chain registry -->
+        <div class="slide" data-slide="5">
+            <div class="slide-label mono">Core part · Registry</div>
+            <h2>Wrapper <span style="color:var(--cyan)">Registry</span></h2>
+            <p><strong>FHERC20WrapperRegistry</strong> is an on-chain factory: the <strong>first</strong> user to wrap a
+                new ERC-20 pays deployment gas for that token’s wrapper; <strong>everyone else reuses</strong> the same
+                contract.</p>
+            <ul class="core-list">
+                <li>No manual “deploy my confidential token” step for each user.</li>
+                <li>Hardhat-deployed Solidity in-repo — same version control as the extension.</li>
+            </ul>
+        </div>
 
-    <!-- 7: Extension architecture -->
-    <div class="slide" data-slide="6">
-        <div class="slide-label mono">Core part · Extension</div>
-        <h2>Chrome <span style="color:var(--cyan)">Extension</span></h2>
-        <p>Built for <strong>side panel</strong> constraints: fast UI, encrypted vault at rest, background worker for auto-lock, RPC proxy, permissions, and approval queue.</p>
-        <ul class="core-list">
-            <li><strong>Vault</strong> — AES-GCM + PBKDF2; keys in memory only while unlocked.</li>
-            <li><strong>dApps</strong> — EIP-1193 / EIP-6963 injection; connect, sign, typed data, transaction, and network switch requests appear inside NixWallet.</li>
-            <li><strong>Product</strong> — Send/receive, activity, token management, address book, batch unwrap UX, and WalletConnect request handling.</li>
-        </ul>
-    </div>
+        <!-- 7: Extension architecture -->
+        <div class="slide" data-slide="6">
+            <div class="slide-label mono">Core part · Extension</div>
+            <h2>Chrome <span style="color:var(--cyan)">Extension</span></h2>
+            <p>Built for <strong>side panel</strong> constraints: fast UI, encrypted vault at rest, background worker
+                for auto-lock, RPC proxy, permissions, and approval queue.</p>
+            <ul class="core-list">
+                <li><strong>Vault</strong> — AES-GCM + PBKDF2; keys in memory only while unlocked.</li>
+                <li><strong>dApps</strong> — EIP-1193 / EIP-6963 injection; connect, sign, typed data, transaction, and
+                    network switch requests appear inside NixWallet.</li>
+                <li><strong>Product</strong> — Send/receive, activity, token management, address book, batch unwrap UX,
+                    and WalletConnect request handling.</li>
+            </ul>
+        </div>
 
-    <!-- 8: Tech + networks -->
-    <div class="slide" data-slide="7">
-        <div class="slide-label mono">Stack &amp; rollout</div>
-        <h2>Tech &amp; <span style="color:var(--cyan)">Networks</span></h2>
-        <p>Ships across <strong>Ethereum Sepolia</strong>, <strong>Base Sepolia</strong>, and <strong>Arbitrum Sepolia</strong> with network-aware RPC, registry addresses, and chain switching.</p>
-        <div class="pill-row">
-            <div class="pill">React 19</div>
-            <div class="pill">TypeScript</div>
-            <div class="pill">Vite · CRXJS</div>
-            <div class="pill">Tailwind v4</div>
-            <div class="pill">coFHE SDK</div>
-            <div class="pill">ethers v6</div>
-            <div class="pill">EIP-6963</div>
-            <div class="pill">WalletConnect v2</div>
-            <div class="pill">Hardhat</div>
-            <div class="pill">Solidity 0.8.25</div>
+        <!-- 8: Tech + networks -->
+        <div class="slide" data-slide="7">
+            <div class="slide-label mono">Stack &amp; rollout</div>
+            <h2>Tech &amp; <span style="color:var(--cyan)">Networks</span></h2>
+            <p>Ships across <strong>Ethereum Sepolia</strong>, <strong>Base Sepolia</strong>, and <strong>Arbitrum
+                    Sepolia</strong> with network-aware RPC, registry addresses, and chain switching.</p>
+            <div class="pill-row">
+                <div class="pill">React 19</div>
+                <div class="pill">TypeScript</div>
+                <div class="pill">Vite · CRXJS</div>
+                <div class="pill">Tailwind v4</div>
+                <div class="pill">coFHE SDK</div>
+                <div class="pill">ethers v6</div>
+                <div class="pill">EIP-6963</div>
+                <div class="pill">WalletConnect v2</div>
+                <div class="pill">Hardhat</div>
+                <div class="pill">Solidity 0.8.25</div>
+            </div>
+        </div>
+
+        <!-- 9: DApp approval surface -->
+        <div class="slide" data-slide="8">
+            <div class="slide-label mono">DApp approval model</div>
+            <h2>Requests Stay In <span style="color:var(--cyan)">NixWallet</span></h2>
+            <p>The <a href="https://nixwalletdapp.vercel.app" target="_blank" rel="noopener"
+                    style="color:var(--cyan)">companion dApp</a> is a live showcase for <strong>any external
+                    site</strong> integrating NixWallet: it initiates connect, transfer, approve, wrap, reveal,
+                confidential transfer, unwrap, and claim — but never holds keys or trusted approvals.</p>
+            <ul class="core-list">
+                <li><strong>Injected + WalletConnect</strong> — EIP-6963 discovery, <code>eth_*</code> RPC, and Reown
+                    sessions; NixWallet owns the confirmation surface.</li>
+                <li><strong>Unlock gate</strong> — requests can be visible while locked, but approval is blocked until
+                    unlock.</li>
+                <li><strong>Activity</strong> — injected dApp and WalletConnect submissions recorded alongside
+                    wallet-native history.</li>
+            </ul>
+        </div>
+
+        <!-- 10: Vision one-liner -->
+        <div class="slide" data-slide="9">
+            <div class="slide-label mono">In one line</div>
+            <div class="quote" style="margin-top:0;">
+                NixWallet is a <strong>confidential browser wallet</strong> for wrapping ERC-20s, moving encrypted
+                amounts, approving dApps, and unwrapping back — with <strong>no centralized wallet server</strong>.
+            </div>
+        </div>
+
+        <!-- 11: Thank you -->
+        <div class="slide" data-slide="10">
+            <div class="slide-label mono">Created by Team Goldtek</div>
+            <h2>Thank You</h2>
+            <p style="margin-bottom: 0.5rem;">Repo, demo, and contact.</p>
+            <div class="link-row">
+                <a href="https://chromewebstore.google.com/detail/nixwallet/nkkaidapildbkjmnfeieepmejghgmipi"
+                    target="_blank" class="primary">Install on Chrome</a>
+                <a href="https://nixwalletdapp.vercel.app" target="_blank" class="primary">Companion dApp</a>
+                <a href="index.html" class="primary">Landing page</a>
+                <a href="slides-journey.html">Walkthrough slides</a>
+                <a href="https://github.com/AshThunder/nixwallet" target="_blank">GitHub</a>
+                <a href="https://x.com/ChrisGold__" target="_blank">@ChrisGold__</a>
+                <a href="https://x.com/fhenix" target="_blank">@Fhenix</a>
+                <a href="https://fhenix.io" target="_blank">Fhenix.io</a>
+            </div>
         </div>
     </div>
 
-    <!-- 9: DApp approval surface -->
-    <div class="slide" data-slide="8">
-        <div class="slide-label mono">DApp approval model</div>
-        <h2>Requests Stay In <span style="color:var(--cyan)">NixWallet</span></h2>
-        <p>The <a href="https://nixwalletdapp.vercel.app" target="_blank" rel="noopener" style="color:var(--cyan)">companion dApp</a> is a live showcase for <strong>any external site</strong> integrating NixWallet: it initiates connect, transfer, approve, wrap, reveal, confidential transfer, unwrap, and claim — but never holds keys or trusted approvals.</p>
-        <ul class="core-list">
-            <li><strong>Injected + WalletConnect</strong> — EIP-6963 discovery, <code>eth_*</code> RPC, and Reown sessions; NixWallet owns the confirmation surface.</li>
-            <li><strong>Unlock gate</strong> — requests can be visible while locked, but approval is blocked until unlock.</li>
-            <li><strong>Activity</strong> — injected dApp and WalletConnect submissions recorded alongside wallet-native history.</li>
-        </ul>
-    </div>
+    <div id="progress" style="width: 9.09%"></div>
+    <div id="counter" class="mono">1 / 11</div>
+    <div id="nav-hint" class="mono">← → · click sides · or use arrows</div>
 
-    <!-- 10: Vision one-liner -->
-    <div class="slide" data-slide="9">
-        <div class="slide-label mono">In one line</div>
-        <div class="quote" style="margin-top:0;">
-            NixWallet is a <strong>confidential browser wallet</strong> for wrapping ERC-20s, moving encrypted amounts, approving dApps, and unwrapping back — with <strong>no centralized wallet server</strong>.
-        </div>
-    </div>
+    <button type="button" id="nav-prev" class="slide-nav slide-nav-prev" aria-label="Previous slide">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="currentColor" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
+        </svg>
+    </button>
+    <button type="button" id="nav-next" class="slide-nav slide-nav-next" aria-label="Next slide">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="currentColor" d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
+        </svg>
+    </button>
 
-    <!-- 11: Thank you -->
-    <div class="slide" data-slide="10">
-        <div class="slide-label mono">Created by Chris Gold</div>
-        <h2>Thank You</h2>
-        <p style="margin-bottom: 0.5rem;">Repo, demo, and contact.</p>
-        <div class="link-row">
-            <a href="https://chromewebstore.google.com/detail/nixwallet/nkkaidapildbkjmnfeieepmejghgmipi" target="_blank" class="primary">Install on Chrome</a>
-            <a href="https://nixwalletdapp.vercel.app" target="_blank" class="primary">Companion dApp</a>
-            <a href="index.html" class="primary">Landing page</a>
-            <a href="slides-journey.html">Walkthrough slides</a>
-            <a href="https://github.com/AshThunder/nixwallet" target="_blank">GitHub</a>
-            <a href="https://x.com/ChrisGold__" target="_blank">@ChrisGold__</a>
-            <a href="https://x.com/fhenix" target="_blank">@Fhenix</a>
-            <a href="https://fhenix.io" target="_blank">Fhenix.io</a>
-        </div>
-    </div>
-</div>
+    <script>
+        const slides = document.querySelectorAll('.slide');
+        const total = slides.length;
+        let current = 0;
 
-<div id="progress" style="width: 9.09%"></div>
-<div id="counter" class="mono">1 / 11</div>
-<div id="nav-hint" class="mono">← → · click sides · or use arrows</div>
+        function updateNavButtons() {
+            const prevBtn = document.getElementById('nav-prev');
+            const nextBtn = document.getElementById('nav-next');
+            if (prevBtn) prevBtn.disabled = current <= 0;
+            if (nextBtn) nextBtn.disabled = current >= total - 1;
+        }
 
-<button type="button" id="nav-prev" class="slide-nav slide-nav-prev" aria-label="Previous slide">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
-</button>
-<button type="button" id="nav-next" class="slide-nav slide-nav-next" aria-label="Next slide">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
-</button>
+        function goTo(n) {
+            if (n < 0 || n >= total || n === current) return;
+            const prev = current;
+            slides[prev].classList.remove('active');
+            slides[prev].classList.add('exiting');
+            current = n;
+            slides[current].classList.add('active');
+            setTimeout(() => slides[prev].classList.remove('exiting'), 500);
 
-<script>
-    const slides = document.querySelectorAll('.slide');
-    const total = slides.length;
-    let current = 0;
+            document.getElementById('progress').style.width = ((current + 1) / total * 100) + '%';
+            document.getElementById('counter').textContent = (current + 1) + ' / ' + total;
+            updateNavButtons();
+        }
 
-    function updateNavButtons() {
-        const prevBtn = document.getElementById('nav-prev');
-        const nextBtn = document.getElementById('nav-next');
-        if (prevBtn) prevBtn.disabled = current <= 0;
-        if (nextBtn) nextBtn.disabled = current >= total - 1;
-    }
-
-    function goTo(n) {
-        if (n < 0 || n >= total || n === current) return;
-        const prev = current;
-        slides[prev].classList.remove('active');
-        slides[prev].classList.add('exiting');
-        current = n;
-        slides[current].classList.add('active');
-        setTimeout(() => slides[prev].classList.remove('exiting'), 500);
-
-        document.getElementById('progress').style.width = ((current + 1) / total * 100) + '%';
-        document.getElementById('counter').textContent = (current + 1) + ' / ' + total;
+        document.getElementById('nav-prev').addEventListener('click', (e) => { e.stopPropagation(); goTo(current - 1); });
+        document.getElementById('nav-next').addEventListener('click', (e) => { e.stopPropagation(); goTo(current + 1); });
         updateNavButtons();
-    }
 
-    document.getElementById('nav-prev').addEventListener('click', (e) => { e.stopPropagation(); goTo(current - 1); });
-    document.getElementById('nav-next').addEventListener('click', (e) => { e.stopPropagation(); goTo(current + 1); });
-    updateNavButtons();
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter') { e.preventDefault(); goTo(current + 1); }
+            if (e.key === 'ArrowLeft' || e.key === 'Backspace') { e.preventDefault(); goTo(current - 1); }
+            if (e.key === 'Home') { e.preventDefault(); goTo(0); }
+            if (e.key === 'End') { e.preventDefault(); goTo(total - 1); }
+        });
 
-    // Keyboard navigation
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter') { e.preventDefault(); goTo(current + 1); }
-        if (e.key === 'ArrowLeft' || e.key === 'Backspace') { e.preventDefault(); goTo(current - 1); }
-        if (e.key === 'Home') { e.preventDefault(); goTo(0); }
-        if (e.key === 'End') { e.preventDefault(); goTo(total - 1); }
-    });
-
-    // Click navigation (left half = back, right half = forward)
-    document.addEventListener('click', (e) => {
-        if (e.target.closest('a') || e.target.closest('.slide-nav')) return;
-        if (e.clientX < window.innerWidth / 2) goTo(current - 1);
-        else goTo(current + 1);
-    });
-</script>
+        // Click navigation (left half = back, right half = forward)
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('a') || e.target.closest('.slide-nav')) return;
+            if (e.clientX < window.innerWidth / 2) goTo(current - 1);
+            else goTo(current + 1);
+        });
+    </script>
 
 </body>
+
 </html>

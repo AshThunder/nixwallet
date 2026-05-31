@@ -155,6 +155,37 @@ export async function shieldWrappedNative(
   return wrapper.shieldWrappedNative(to, aligned);
 }
 
+/**
+ * Wait for the ERC20 allowance to be reflected on the RPC provider to prevent gas estimation failures.
+ */
+export async function waitForAllowance(
+  provider: ethers.Provider,
+  tokenAddress: string,
+  owner: string,
+  spender: string,
+  targetAmount: bigint,
+  maxAttempts = 12,
+  delayMs = 1000
+): Promise<void> {
+  const contract = new ethers.Contract(
+    tokenAddress,
+    ['function allowance(address owner, address spender) view returns (uint256)'],
+    provider
+  );
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      const currentAllowance: bigint = await contract.allowance(owner, spender);
+      if (currentAllowance >= targetAmount) {
+        return;
+      }
+    } catch (err) {
+      // Ignore RPC glitches and retry
+    }
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
+  throw new Error('Approval not reflected on-chain yet. Please retry in a few seconds.');
+}
+
 /** Shield public ERC20 into confidential FHERC20 balance, auto-deploying the wrapper if needed */
 export async function shieldTokens(signer: ethers.Signer, underlying: string, to: string, amount: bigint): Promise<ethers.ContractTransactionResponse> {
   if (isNativeTokenAddress(underlying)) {
@@ -169,6 +200,10 @@ export async function shieldTokens(signer: ethers.Signer, underlying: string, to
   );
   const approveTx = await token.approve(wrapperAddress, amount);
   await approveTx.wait();
+
+  // Wait for allowance replication before shielding
+  const ownerAddress = await signer.getAddress();
+  await waitForAllowance(signer.provider!, underlying, ownerAddress, wrapperAddress, amount);
 
   const wrapper = new ethers.Contract(wrapperAddress, WRAPPER_ABI, signer);
   return wrapper.shield(to, amount);

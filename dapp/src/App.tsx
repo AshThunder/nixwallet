@@ -58,6 +58,8 @@ function short(address?: string) {
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
 }
 
+
+
 export default function App() {
   const [providerInfo, setProviderInfo] = useState<DiscoveredProvider | null>(null);
   const [account, setAccount] = useState('');
@@ -554,6 +556,7 @@ export default function App() {
     { id: 'confidential', label: 'Confidential Transfer' },
     { id: 'unwrap', label: 'Unwrap / Claim' },
   ];
+
 
   return (
     <div className="min-h-screen bg-[#050816] text-white">

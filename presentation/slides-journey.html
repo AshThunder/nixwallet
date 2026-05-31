@@ -1,22 +1,31 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NixWallet — User walkthrough</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
     <style>
-        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
         :root {
             --bg: #020617;
             --surface: #0f172a;
             --surface-elevated: #1e293b;
-            --border: rgba(255,255,255,0.08);
+            --border: rgba(255, 255, 255, 0.08);
             --cyan: #22d3ee;
             --cyan-active: #06b6d4;
-            --cyan-dim: rgba(34,211,238,0.12);
-            --cyan-glow: rgba(34,211,238,0.35);
+            --cyan-dim: rgba(34, 211, 238, 0.12);
+            --cyan-glow: rgba(34, 211, 238, 0.35);
             --white: #f8fafc;
             --sub: #94a3b8;
             --muted: #475569;
@@ -37,55 +46,95 @@
             color: var(--white);
             font-family: 'Inter', sans-serif;
             overflow: hidden;
-            width: 100vw; height: 100vh;
+            width: 100vw;
+            height: 100vh;
             cursor: default;
             user-select: none;
         }
-        .mono { font-family: 'JetBrains Mono', monospace; }
 
-        #deck { position: relative; width: 100%; height: 100%; }
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        #deck {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
         .slide {
-            position: absolute; inset: 0;
-            display: flex; flex-direction: column;
-            align-items: center; justify-content: center;
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
             padding: clamp(1.75rem, 3vh, 3.5rem) clamp(1.25rem, 4vw, 4.5rem);
             opacity: 0;
             transform: translateX(60px);
-            transition: opacity 0.5s cubic-bezier(.16,1,.3,1), transform 0.5s cubic-bezier(.16,1,.3,1);
+            transition: opacity 0.5s cubic-bezier(.16, 1, .3, 1), transform 0.5s cubic-bezier(.16, 1, .3, 1);
             pointer-events: none;
             z-index: 0;
         }
+
         .slide.active {
-            opacity: 1; transform: translateX(0);
-            pointer-events: auto; z-index: 1;
-        }
-        .slide.exiting {
-            opacity: 0; transform: translateX(-60px);
+            opacity: 1;
+            transform: translateX(0);
+            pointer-events: auto;
+            z-index: 1;
         }
 
-        .glow { display: none; }
-        .glow-1 { top: -200px; right: -200px; }
-        .glow-2 { bottom: -200px; left: -200px; opacity: 0.15; }
+        .slide.exiting {
+            opacity: 0;
+            transform: translateX(-60px);
+        }
+
+        .glow {
+            display: none;
+        }
+
+        .glow-1 {
+            top: -200px;
+            right: -200px;
+        }
+
+        .glow-2 {
+            bottom: -200px;
+            left: -200px;
+            opacity: 0.15;
+        }
 
         .slide-label {
             font-size: clamp(0.8rem, 1.5vw, 1.15rem);
             font-weight: 700;
-            letter-spacing: 0.2em; text-transform: uppercase;
-            color: var(--cyan); margin-bottom: clamp(1rem, 2vh, 1.75rem);
-        }
-        .slide h1 {
-            font-size: clamp(3rem, 11vw, 7.5rem);
-            font-weight: 700; letter-spacing: -0.04em;
-            text-transform: uppercase; line-height: 1;
-            text-align: center;
-        }
-        .slide h1 span { color: var(--cyan); }
-        .slide h2 {
-            font-size: clamp(2rem, 6.5vw, 4rem);
-            font-weight: 700; letter-spacing: -0.03em;
-            line-height: 1.1; text-align: center;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--cyan);
             margin-bottom: clamp(1rem, 2vh, 1.75rem);
         }
+
+        .slide h1 {
+            font-size: clamp(3rem, 11vw, 7.5rem);
+            font-weight: 700;
+            letter-spacing: -0.04em;
+            text-transform: uppercase;
+            line-height: 1;
+            text-align: center;
+        }
+
+        .slide h1 span {
+            color: var(--cyan);
+        }
+
+        .slide h2 {
+            font-size: clamp(2rem, 6.5vw, 4rem);
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            line-height: 1.1;
+            text-align: center;
+            margin-bottom: clamp(1rem, 2vh, 1.75rem);
+        }
+
         .slide p {
             font-size: clamp(1.2rem, 2.6vw, 1.75rem);
             color: var(--sub);
@@ -93,7 +142,10 @@
             text-align: center;
             line-height: 1.55;
         }
-        .slide p strong { color: var(--white); }
+
+        .slide p strong {
+            color: var(--white);
+        }
 
         .slide code.mono {
             font-size: 0.92em;
@@ -106,6 +158,7 @@
             text-align: left;
             list-style: none;
         }
+
         .step-list li {
             font-size: clamp(1.05rem, 2.2vw, 1.45rem);
             color: var(--sub);
@@ -114,27 +167,51 @@
             border-left: 3px solid var(--cyan-dim);
             margin-bottom: 0.35rem;
         }
-        .step-list li strong { color: var(--white); }
+
+        .step-list li strong {
+            color: var(--white);
+        }
 
         .link-row {
-            display: flex; gap: 1rem; margin-top: 1.75rem;
-            flex-wrap: wrap; justify-content: center;
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.75rem;
+            flex-wrap: wrap;
+            justify-content: center;
         }
+
         .link-row a {
             padding: clamp(0.85rem, 1.5vh, 1.1rem) clamp(1.25rem, 2.5vw, 1.75rem);
             font-size: clamp(0.85rem, 1.5vw, 1.05rem);
             font-weight: 600;
-            text-transform: uppercase; letter-spacing: 0.08em;
-            text-decoration: none; transition: background-color 0.2s, border-color 0.2s, color 0.2s, transform 0.2s;
-            border: 1px solid var(--border); color: var(--white); background: var(--surface);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            text-decoration: none;
+            transition: background-color 0.2s, border-color 0.2s, color 0.2s, transform 0.2s;
+            border: 1px solid var(--border);
+            color: var(--white);
+            background: var(--surface);
             border-radius: var(--radius-md);
         }
-        .link-row a:hover { border-color: var(--cyan); color: var(--cyan); background: var(--surface-elevated); }
+
+        .link-row a:hover {
+            border-color: var(--cyan);
+            color: var(--cyan);
+            background: var(--surface-elevated);
+        }
+
         .link-row a.primary {
-            background: var(--cyan); color: var(--bg); border-color: var(--cyan);
+            background: var(--cyan);
+            color: var(--bg);
+            border-color: var(--cyan);
             box-shadow: none;
         }
-        .link-row a.primary:hover { background: var(--cyan-active); border-color: var(--cyan-active); color: var(--bg); }
+
+        .link-row a.primary:hover {
+            background: var(--cyan-active);
+            border-color: var(--cyan-active);
+            color: var(--bg);
+        }
 
         .slide .built-by {
             font-size: clamp(1.4rem, 3.5vw, 2.5rem);
@@ -145,27 +222,40 @@
             line-height: 1.1;
             margin-bottom: clamp(0.75rem, 2vh, 1.5rem);
         }
+
         .slide .built-by span {
             color: var(--cyan);
         }
 
         #progress {
-            position: fixed; bottom: 0; left: 0;
-            height: 5px; background: var(--cyan);
-            transition: width 0.4s ease; z-index: 100;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            height: 5px;
+            background: var(--cyan);
+            transition: width 0.4s ease;
+            z-index: 100;
             box-shadow: 0 0 12px var(--cyan-glow);
         }
+
         #counter {
-            position: fixed; bottom: clamp(1rem, 2vh, 1.75rem); right: clamp(1rem, 2.5vw, 2.25rem);
+            position: fixed;
+            bottom: clamp(1rem, 2vh, 1.75rem);
+            right: clamp(1rem, 2.5vw, 2.25rem);
             font-size: clamp(0.8rem, 1.4vw, 1.05rem);
             color: var(--muted);
-            letter-spacing: 0.1em; z-index: 100;
+            letter-spacing: 0.1em;
+            z-index: 100;
         }
+
         #nav-hint {
-            position: fixed; bottom: clamp(1rem, 2vh, 1.75rem); left: clamp(1rem, 2.5vw, 2.25rem);
+            position: fixed;
+            bottom: clamp(1rem, 2vh, 1.75rem);
+            left: clamp(1rem, 2.5vw, 2.25rem);
             font-size: clamp(0.7rem, 1.2vw, 0.95rem);
             color: var(--muted);
-            letter-spacing: 0.08em; text-transform: uppercase;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
             z-index: 100;
             max-width: min(48vw, 22rem);
             line-height: 1.35;
@@ -188,246 +278,302 @@
             justify-content: center;
             transition: background 0.2s, border-color 0.2s, opacity 0.2s, box-shadow 0.2s;
             padding: 0;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
         }
+
         .slide-nav:hover:not(:disabled) {
             border-color: var(--cyan);
             background: var(--surface-elevated);
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
         }
+
         .slide-nav:focus-visible {
             outline: 2px solid var(--cyan);
             outline-offset: 3px;
         }
+
         .slide-nav:disabled {
             opacity: 0.22;
             cursor: not-allowed;
         }
-        .slide-nav-prev { left: clamp(0.5rem, 2vw, 1.25rem); }
-        .slide-nav-next { right: clamp(0.5rem, 2vw, 1.25rem); }
+
+        .slide-nav-prev {
+            left: clamp(0.5rem, 2vw, 1.25rem);
+        }
+
+        .slide-nav-next {
+            right: clamp(0.5rem, 2vw, 1.25rem);
+        }
+
         .slide-nav svg {
             width: 1.4rem;
             height: 1.4rem;
         }
     </style>
 </head>
+
 <body>
 
-<div class="glow glow-1"></div>
-<div class="glow glow-2"></div>
+    <div class="glow glow-1"></div>
+    <div class="glow glow-2"></div>
 
-<div id="deck">
+    <div id="deck">
 
-    <div class="slide active" data-slide="0">
-        <div class="slide-label mono">Start · What is this?</div>
-        <h1>NIX<span>WALLET</span></h1>
-        <p style="margin-top:1.25rem;"><strong>NixWallet</strong> is a <strong>self-custodial</strong> Chrome extension wallet for the <strong>Fhenix</strong> stack: wrap <strong>ERC-20s</strong> and native ETH into confidential assets, send <strong>encrypted amounts</strong> with <strong>coFHE</strong>, and approve external sites from the <strong>side panel</strong>.</p>
-        <p style="margin-top:1rem;">The hosted <a href="https://nixwalletdapp.vercel.app" target="_blank" rel="noopener" style="color:var(--cyan)">companion dApp</a> shows how <strong>any web dApp</strong> can interact with NixWallet via injected provider or WalletConnect—without building its own signing UI.</p>
-        <p style="margin-top:1rem;">This deck walks you through the product <strong>from first install to everyday use</strong>. One slide per step.</p>
-    </div>
+        <div class="slide active" data-slide="0">
+            <div class="slide-label mono">Start · What is this?</div>
+            <h1>NIX<span>WALLET</span></h1>
+            <p style="margin-top:1.25rem;"><strong>NixWallet</strong> is a <strong>self-custodial</strong> Wallet for
+                the <strong>Fhenix</strong> stack: wrap <strong>ERC-20s</strong> and native ETH into confidential
+                assets, send <strong>encrypted amounts</strong> with <strong>coFHE</strong>, and approve external sites
+                from the <strong>side panel</strong>.</p>
+            <p style="margin-top:1rem;">The hosted <a href="https://nixwalletdapp.vercel.app" target="_blank"
+                    rel="noopener" style="color:var(--cyan)">companion dApp</a> shows how <strong>any web dApp</strong>
+                can interact with NixWallet via injected provider or WalletConnect—without building its own signing UI.
+            </p>
+            <p style="margin-top:1rem;">This deck walks you through the product <strong>from first install to everyday
+                    use</strong>. One slide per step.</p>
+        </div>
 
-    <div class="slide" data-slide="1">
-        <div class="slide-label mono">Step 1 · Add to Chrome</div>
-        <h2>Add the extension <span style="color:var(--cyan)">in Chrome</span></h2>
-        <p><strong>While you build or test:</strong> open <code class="mono">chrome://extensions</code>, turn on <strong>Developer mode</strong>, click <strong>Load unpacked</strong>, and pick the <strong>dist</strong> folder from your build.</p>
-        <p style="margin-top:1rem;"><strong>For users:</strong> install from the Chrome Web Store like any other extension.</p>
-        <ul class="step-list">
-            <li><strong>Tip:</strong> after a code change, run <strong>build</strong> again, then refresh the extension on the extensions page.</li>
-        </ul>
-    </div>
+        <div class="slide" data-slide="1">
+            <div class="slide-label mono">Step 1 · Add to Chrome</div>
+            <h2>Add the extension <span style="color:var(--cyan)">in Chrome</span></h2>
+            <p><strong>While you build or test:</strong> open <code class="mono">chrome://extensions</code>, turn on
+                <strong>Developer mode</strong>, click <strong>Load unpacked</strong>, and pick the
+                <strong>dist</strong> folder from your build.
+            </p>
+            <p style="margin-top:1rem;"><strong>For users:</strong> install from the Chrome Web Store like any other
+                extension.</p>
+            <ul class="step-list">
+                <li><strong>Tip:</strong> after a code change, run <strong>build</strong> again, then refresh the
+                    extension on the extensions page.</li>
+            </ul>
+        </div>
 
-    <div class="slide" data-slide="2">
-        <div class="slide-label mono">Step 2 · Open it</div>
-        <h2>Open the <span style="color:var(--cyan)">side panel</span></h2>
-        <p>Click the <strong>NixWallet icon</strong> in the Chrome toolbar. The wallet opens on the <strong>side</strong> of the browser. It stays there while you use other sites.</p>
-        <ul class="step-list">
-            <li>If nothing opens, check that the extension is <strong>turned on</strong> in <code class="mono">chrome://extensions</code>.</li>
-        </ul>
-    </div>
+        <div class="slide" data-slide="2">
+            <div class="slide-label mono">Step 2 · Open it</div>
+            <h2>Open the <span style="color:var(--cyan)">side panel</span></h2>
+            <p>Click the <strong>NixWallet icon</strong> in the Chrome toolbar. The wallet opens on the
+                <strong>side</strong> of the browser. It stays there while you use other sites.
+            </p>
+            <ul class="step-list">
+                <li>If nothing opens, check that the extension is <strong>turned on</strong> in <code
+                        class="mono">chrome://extensions</code>.</li>
+            </ul>
+        </div>
 
-    <div class="slide" data-slide="3">
-        <div class="slide-label mono">Step 3 · Onboarding</div>
-        <h2>First time: <span style="color:var(--cyan)">set up</span> your wallet</h2>
-        <p>You can <strong>create a new wallet</strong> or <strong>import</strong> keys you already have.</p>
-        <ul class="step-list">
-            <li><strong>Password</strong> — locks the wallet and protects your saved data.</li>
-            <li><strong>Seed phrase</strong> — 12 words. Write them down and store them safely. They are the <strong>backup</strong> for your wallet.</li>
-            <li><strong>Never</strong> share your seed or password with anyone.</li>
-        </ul>
-        <p style="margin-top:1rem;">When you finish, you land on the <strong>home</strong> screen.</p>
-    </div>
+        <div class="slide" data-slide="3">
+            <div class="slide-label mono">Step 3 · Onboarding</div>
+            <h2>First time: <span style="color:var(--cyan)">set up</span> your wallet</h2>
+            <p>You can <strong>create a new wallet</strong> or <strong>import</strong> keys you already have.</p>
+            <ul class="step-list">
+                <li><strong>Password</strong> — locks the wallet and protects your saved data.</li>
+                <li><strong>Seed phrase</strong> — 12 words. Write them down and store them safely. They are the
+                    <strong>backup</strong> for your wallet.
+                </li>
+                <li><strong>Never</strong> share your seed or password with anyone.</li>
+            </ul>
+            <p style="margin-top:1rem;">When you finish, you land on the <strong>home</strong> screen.</p>
+        </div>
 
-    <div class="slide" data-slide="4">
-        <div class="slide-label mono">Step 4 · Home</div>
-        <h2>The <span style="color:var(--cyan)">dashboard</span></h2>
-        <p>This is your <strong>main screen</strong> after you unlock. You see <strong>balances</strong>, quick actions, and tabs at the bottom.</p>
-        <ul class="step-list">
-            <li><strong>Tokens</strong> — coins and tokens you care about.</li>
-            <li><strong>Activity</strong> — wallet-native, injected dApp, and WalletConnect transaction history.</li>
-            <li><strong>Discover</strong> — links to learn more about the ecosystem.</li>
-        </ul>
-    </div>
+        <div class="slide" data-slide="4">
+            <div class="slide-label mono">Step 4 · Home</div>
+            <h2>The <span style="color:var(--cyan)">dashboard</span></h2>
+            <p>This is your <strong>main screen</strong> after you unlock. You see <strong>balances</strong>, quick
+                actions, and tabs at the bottom.</p>
+            <ul class="step-list">
+                <li><strong>Tokens</strong> — coins and tokens you care about.</li>
+                <li><strong>Activity</strong> — wallet-native, injected dApp, and WalletConnect transaction history.
+                </li>
+                <li><strong>Discover</strong> — links to learn more about the ecosystem.</li>
+            </ul>
+        </div>
 
-    <div class="slide" data-slide="5">
-        <div class="slide-label mono">Step 5 · Wrap</div>
-        <h2><span style="color:var(--cyan)">Wrap</span> a token (shield)</h2>
-        <p><strong>Wrap</strong> turns a normal testnet token into a <strong>private</strong> form. The amount is handled with <strong>encryption</strong> on the network side.</p>
-        <ul class="step-list">
-            <li>Open <strong>Wrap / Unwrap</strong>, pick a token, enter an amount.</li>
-            <li>You may need to <strong>approve</strong> once so the contract can move your token.</li>
-            <li>After it works, you can <strong>reveal</strong> your private balance on the home screen when you want.</li>
-        </ul>
-    </div>
+        <div class="slide" data-slide="5">
+            <div class="slide-label mono">Step 5 · Wrap</div>
+            <h2><span style="color:var(--cyan)">Wrap</span> a token (shield)</h2>
+            <p><strong>Wrap</strong> turns a normal testnet token into a <strong>private</strong> form. The amount is
+                handled with <strong>encryption</strong> on the network side.</p>
+            <ul class="step-list">
+                <li>Open <strong>Wrap / Unwrap</strong>, pick a token, enter an amount.</li>
+                <li>You may need to <strong>approve</strong> once so the contract can move your token.</li>
+                <li>After it works, you can <strong>reveal</strong> your private balance on the home screen when you
+                    want.</li>
+            </ul>
+        </div>
 
-    <div class="slide" data-slide="6">
-        <div class="slide-label mono">Step 6 · Send</div>
-        <h2><span style="color:var(--cyan)">Send</span> tokens or ETH</h2>
-        <p>Open <strong>Send</strong>. Choose <strong>ETH</strong> or a <strong>token</strong>. Paste the <strong>receiver address</strong>. Enter the <strong>amount</strong>. Check the details, then confirm.</p>
-        <ul class="step-list">
-            <li>You can send in a <strong>normal</strong> way or use <strong>private</strong> flows where the app supports it.</li>
-            <li>Always double-check the <strong>address</strong>. Wrong address means lost funds.</li>
-        </ul>
-    </div>
+        <div class="slide" data-slide="6">
+            <div class="slide-label mono">Step 6 · Send</div>
+            <h2><span style="color:var(--cyan)">Send</span> tokens or ETH</h2>
+            <p>Open <strong>Send</strong>. Choose <strong>ETH</strong> or a <strong>token</strong>. Paste the
+                <strong>receiver address</strong>. Enter the <strong>amount</strong>. Check the details, then confirm.
+            </p>
+            <ul class="step-list">
+                <li>You can send in a <strong>normal</strong> way or use <strong>private</strong> flows where the app
+                    supports it.</li>
+                <li>Always double-check the <strong>address</strong>. Wrong address means lost funds.</li>
+            </ul>
+        </div>
 
-    <div class="slide" data-slide="7">
-        <div class="slide-label mono">Step 7 · Receive</div>
-        <h2><span style="color:var(--cyan)">Receive</span> funds</h2>
-        <p>Open <strong>Receive</strong>. You see your <strong>address</strong> and a <strong>QR code</strong>. Share the address or let someone scan the code.</p>
-        <ul class="step-list">
-            <li>Use the dashboard <strong>ETH Faucet</strong> (Google Sepolia) or <strong>USDC Faucet</strong> (Circle) links under public balances, or any testnet faucet for gas.</li>
-            <li>On Sepolia or Base Sepolia, <strong>wrap ETH → cETH</strong> from the ETH card, then reveal and send confidential cETH.</li>
-            <li>Only send <strong>testnet</strong> assets to this address when you are on testnet.</li>
-        </ul>
-    </div>
+        <div class="slide" data-slide="7">
+            <div class="slide-label mono">Step 7 · Receive</div>
+            <h2><span style="color:var(--cyan)">Receive</span> funds</h2>
+            <p>Open <strong>Receive</strong>. You see your <strong>address</strong> and a <strong>QR code</strong>.
+                Share the address or let someone scan the code.</p>
+            <ul class="step-list">
+                <li>Use the dashboard <strong>ETH Faucet</strong> (Google Sepolia) or <strong>USDC Faucet</strong>
+                    (Circle) links under public balances, or any testnet faucet for gas.</li>
+                <li>On Sepolia or Base Sepolia, <strong>wrap ETH → cETH</strong> from the ETH card, then reveal and send
+                    confidential cETH.</li>
+                <li>Only send <strong>testnet</strong> assets to this address when you are on testnet.</li>
+            </ul>
+        </div>
 
-    <div class="slide" data-slide="8">
-        <div class="slide-label mono">Step 8 · Add tokens</div>
-        <h2><span style="color:var(--cyan)">Manage</span> tokens</h2>
-        <p>Use <strong>Manage tokens</strong> to add tokens you use often. You can browse <strong>suggested</strong> tokens or add by <strong>contract address</strong>.</p>
-        <ul class="step-list">
-            <li><strong>In your wallet</strong> — ideas from the chain or lists where discovery is available.</li>
-            <li><strong>Saved</strong> — tokens you chose to keep in the list.</li>
-            <li>Use <strong>search</strong> when the list is long.</li>
-        </ul>
-    </div>
+        <div class="slide" data-slide="8">
+            <div class="slide-label mono">Step 8 · Add tokens</div>
+            <h2><span style="color:var(--cyan)">Manage</span> tokens</h2>
+            <p>Use <strong>Manage tokens</strong> to add tokens you use often. You can browse <strong>suggested</strong>
+                tokens or add by <strong>contract address</strong>.</p>
+            <ul class="step-list">
+                <li><strong>In your wallet</strong> — ideas from the chain or lists where discovery is available.</li>
+                <li><strong>Saved</strong> — tokens you chose to keep in the list.</li>
+                <li>Use <strong>search</strong> when the list is long.</li>
+            </ul>
+        </div>
 
-    <div class="slide" data-slide="9">
-        <div class="slide-label mono">Step 9 · Activity</div>
-        <h2><span style="color:var(--cyan)">Activity</span> tab</h2>
-        <p>Open the <strong>Activity</strong> tab on the home screen. You see a <strong>history</strong> of sends, wraps, dApp submissions, WalletConnect submissions, and other actions.</p>
-        <ul class="step-list">
-            <li>Tap a <strong>link</strong> to open a <strong>block explorer</strong> and see the transaction on the web.</li>
-            <li>Helps you <strong>prove</strong> what happened during a demo or debug.</li>
-        </ul>
-    </div>
+        <div class="slide" data-slide="9">
+            <div class="slide-label mono">Step 9 · Activity</div>
+            <h2><span style="color:var(--cyan)">Activity</span> tab</h2>
+            <p>Open the <strong>Activity</strong> tab on the home screen. You see a <strong>history</strong> of sends,
+                wraps, dApp submissions, WalletConnect submissions, and other actions.</p>
+            <ul class="step-list">
+                <li>Tap a <strong>link</strong> to open a <strong>block explorer</strong> and see the transaction on the
+                    web.</li>
+                <li>Helps you <strong>prove</strong> what happened during a demo or debug.</li>
+            </ul>
+        </div>
 
-    <div class="slide" data-slide="10">
-        <div class="slide-label mono">Step 10 · Settings</div>
-        <h2><span style="color:var(--cyan)">Settings</span></h2>
-        <p>Open the <strong>gear</strong> icon. Here you tune how the wallet behaves.</p>
-        <ul class="step-list">
-            <li><strong>Security</strong> — auto-lock time, clear history, show seed (needs password), delete wallet.</li>
-            <li><strong>Address book</strong> — save names next to addresses for faster sends.</li>
-            <li><strong>Networks</strong> — switch between <strong>Ethereum Sepolia</strong>, <strong>Base Sepolia</strong>, and <strong>Arbitrum Sepolia</strong>.</li>
-            <li><strong>Connected DApps</strong> — review origins, revoke access, and manage WalletConnect sessions.</li>
-            <li><strong>About</strong> — version and links.</li>
-        </ul>
-    </div>
+        <div class="slide" data-slide="10">
+            <div class="slide-label mono">Step 10 · Settings</div>
+            <h2><span style="color:var(--cyan)">Settings</span></h2>
+            <p>Open the <strong>gear</strong> icon. Here you tune how the wallet behaves.</p>
+            <ul class="step-list">
+                <li><strong>Security</strong> — auto-lock time, clear history, show seed (needs password), delete
+                    wallet.</li>
+                <li><strong>Address book</strong> — save names next to addresses for faster sends.</li>
+                <li><strong>Networks</strong> — switch between <strong>Ethereum Sepolia</strong>, <strong>Base
+                        Sepolia</strong>, and <strong>Arbitrum Sepolia</strong>.</li>
+                <li><strong>Connected DApps</strong> — review origins, revoke access, and manage WalletConnect sessions.
+                </li>
+                <li><strong>About</strong> — version and links.</li>
+            </ul>
+        </div>
 
-    <div class="slide" data-slide="11">
-        <div class="slide-label mono">Extra · DApp approvals</div>
-        <h2>DApp requests stay in <span style="color:var(--cyan)">NixWallet</span></h2>
-        <p>The <a href="https://nixwalletdapp.vercel.app" target="_blank" rel="noopener">companion dApp</a> is a reference for <strong>external dApp developers</strong>: it calls NixWallet’s provider; NixWallet owns connect, sign, typed data, and transaction approval.</p>
-        <ul class="step-list">
-            <li>Click <strong>Connect NixWallet</strong> — the approval appears in the extension, not in the dApp page.</li>
-            <li><strong>Unlock first</strong> — approval is blocked while locked.</li>
-            <li><strong>Activity</strong> — submissions from the dApp show up in NixWallet’s Activity tab with decoded labels where possible.</li>
-        </ul>
-    </div>
+        <div class="slide" data-slide="11">
+            <div class="slide-label mono">Extra · DApp approvals</div>
+            <h2>DApp requests stay in <span style="color:var(--cyan)">NixWallet</span></h2>
+            <p>The <a href="https://nixwalletdapp.vercel.app" target="_blank" rel="noopener">companion dApp</a> is a
+                reference for <strong>external dApp developers</strong>: it calls NixWallet’s provider; NixWallet owns
+                connect, sign, typed data, and transaction approval.</p>
+            <ul class="step-list">
+                <li>Click <strong>Connect NixWallet</strong> — the approval appears in the extension, not in the dApp
+                    page.</li>
+                <li><strong>Unlock first</strong> — approval is blocked while locked.</li>
+                <li><strong>Activity</strong> — submissions from the dApp show up in NixWallet’s Activity tab with
+                    decoded labels where possible.</li>
+            </ul>
+        </div>
 
-    <div class="slide" data-slide="12">
-        <div class="slide-label mono">End</div>
-        <h2>You are <span style="color:var(--cyan)">ready</span></h2>
-        <p>That is the full path: <strong>install → open → set up → home → wrap → send → receive → tokens → activity → settings → dApp approvals</strong>.</p>
-        <p style="margin-top:1rem;">Try the app on the supported testnets, open the <strong>README</strong> on GitHub for setup, or continue to the <strong>next slide</strong> for links and a thank-you.</p>
-    </div>
+        <div class="slide" data-slide="12">
+            <div class="slide-label mono">End</div>
+            <h2>You are <span style="color:var(--cyan)">ready</span></h2>
+            <p>That is the full path: <strong>install → open → set up → home → wrap → send → receive → tokens → activity
+                    → settings → dApp approvals</strong>.</p>
+            <p style="margin-top:1rem;">Try the app on the supported testnets, open the <strong>README</strong> on
+                GitHub for setup, or continue to the <strong>next slide</strong> for links and a thank-you.</p>
+        </div>
 
-    <div class="slide" data-slide="13">
-        <div class="built-by">Built by <span>Chris Gold</span></div>
-        <div class="slide-label mono">Thank you</div>
-        <h1>THANK <span>YOU</span></h1>
-        <p style="margin-top:1.5rem;">Thanks for your time. Questions and feedback welcome.</p>
-        <div class="link-row">
-            <a href="https://chromewebstore.google.com/detail/nixwallet/nkkaidapildbkjmnfeieepmejghgmipi" target="_blank" class="primary">Install on Chrome</a>
-            <a href="https://nixwalletdapp.vercel.app" target="_blank">Companion dApp</a>
-            <a href="index.html">Landing page</a>
-            <a href="slides.html">Tech slides</a>
-            <a href="https://github.com/AshThunder/nixwallet" target="_blank">GitHub</a>
-            <a href="https://x.com/ChrisGold__" target="_blank">@ChrisGold__</a>
-            <a href="https://x.com/fhenix" target="_blank">@Fhenix</a>
+        <div class="slide" data-slide="13">
+            <div class="built-by">Built by <span>team Goldtek</span></div>
+            <div class="slide-label mono">Thank you</div>
+            <h1>THANK <span>YOU</span></h1>
+            <p style="margin-top:1.5rem;">Thanks for your time. Questions and feedback welcome.</p>
+            <div class="link-row">
+                <a href="https://chromewebstore.google.com/detail/nixwallet/nkkaidapildbkjmnfeieepmejghgmipi"
+                    target="_blank" class="primary">Install on Chrome</a>
+                <a href="https://nixwalletdapp.vercel.app" target="_blank">Companion dApp</a>
+                <a href="index.html">Landing page</a>
+                <a href="slides.html">Tech slides</a>
+                <a href="https://github.com/AshThunder/nixwallet" target="_blank">GitHub</a>
+                <a href="https://x.com/ChrisGold__" target="_blank">@ChrisGold__</a>
+                <a href="https://x.com/fhenix" target="_blank">@Fhenix</a>
+            </div>
         </div>
     </div>
-</div>
 
-<div id="progress"></div>
-<div id="counter" class="mono"></div>
-<div id="nav-hint" class="mono">← → · click sides · or use arrows</div>
+    <div id="progress"></div>
+    <div id="counter" class="mono"></div>
+    <div id="nav-hint" class="mono">← → · click sides · or use arrows</div>
 
-<button type="button" id="nav-prev" class="slide-nav slide-nav-prev" aria-label="Previous slide">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
-</button>
-<button type="button" id="nav-next" class="slide-nav slide-nav-next" aria-label="Next slide">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
-</button>
+    <button type="button" id="nav-prev" class="slide-nav slide-nav-prev" aria-label="Previous slide">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="currentColor" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
+        </svg>
+    </button>
+    <button type="button" id="nav-next" class="slide-nav slide-nav-next" aria-label="Next slide">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="currentColor" d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
+        </svg>
+    </button>
 
-<script>
-    const slides = document.querySelectorAll('.slide');
-    const total = slides.length;
-    let current = 0;
+    <script>
+        const slides = document.querySelectorAll('.slide');
+        const total = slides.length;
+        let current = 0;
 
-    function syncChrome() {
-        document.getElementById('progress').style.width = ((current + 1) / total * 100) + '%';
-        document.getElementById('counter').textContent = (current + 1) + ' / ' + total;
-    }
+        function syncChrome() {
+            document.getElementById('progress').style.width = ((current + 1) / total * 100) + '%';
+            document.getElementById('counter').textContent = (current + 1) + ' / ' + total;
+        }
 
-    function updateNavButtons() {
-        const prevBtn = document.getElementById('nav-prev');
-        const nextBtn = document.getElementById('nav-next');
-        if (prevBtn) prevBtn.disabled = current <= 0;
-        if (nextBtn) nextBtn.disabled = current >= total - 1;
-    }
+        function updateNavButtons() {
+            const prevBtn = document.getElementById('nav-prev');
+            const nextBtn = document.getElementById('nav-next');
+            if (prevBtn) prevBtn.disabled = current <= 0;
+            if (nextBtn) nextBtn.disabled = current >= total - 1;
+        }
 
-    function goTo(n) {
-        if (n < 0 || n >= total || n === current) return;
-        const prev = current;
-        slides[prev].classList.remove('active');
-        slides[prev].classList.add('exiting');
-        current = n;
-        slides[current].classList.add('active');
-        setTimeout(() => slides[prev].classList.remove('exiting'), 500);
+        function goTo(n) {
+            if (n < 0 || n >= total || n === current) return;
+            const prev = current;
+            slides[prev].classList.remove('active');
+            slides[prev].classList.add('exiting');
+            current = n;
+            slides[current].classList.add('active');
+            setTimeout(() => slides[prev].classList.remove('exiting'), 500);
+            syncChrome();
+            updateNavButtons();
+        }
+
         syncChrome();
         updateNavButtons();
-    }
 
-    syncChrome();
-    updateNavButtons();
+        document.getElementById('nav-prev').addEventListener('click', (e) => { e.stopPropagation(); goTo(current - 1); });
+        document.getElementById('nav-next').addEventListener('click', (e) => { e.stopPropagation(); goTo(current + 1); });
 
-    document.getElementById('nav-prev').addEventListener('click', (e) => { e.stopPropagation(); goTo(current - 1); });
-    document.getElementById('nav-next').addEventListener('click', (e) => { e.stopPropagation(); goTo(current + 1); });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter') { e.preventDefault(); goTo(current + 1); }
+            if (e.key === 'ArrowLeft' || e.key === 'Backspace') { e.preventDefault(); goTo(current - 1); }
+            if (e.key === 'Home') { e.preventDefault(); goTo(0); }
+            if (e.key === 'End') { e.preventDefault(); goTo(total - 1); }
+        });
 
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter') { e.preventDefault(); goTo(current + 1); }
-        if (e.key === 'ArrowLeft' || e.key === 'Backspace') { e.preventDefault(); goTo(current - 1); }
-        if (e.key === 'Home') { e.preventDefault(); goTo(0); }
-        if (e.key === 'End') { e.preventDefault(); goTo(total - 1); }
-    });
-
-    document.addEventListener('click', (e) => {
-        if (e.target.closest('a') || e.target.closest('.slide-nav')) return;
-        if (e.clientX < window.innerWidth / 2) goTo(current - 1);
-        else goTo(current + 1);
-    });
-</script>
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('a') || e.target.closest('.slide-nav')) return;
+            if (e.clientX < window.innerWidth / 2) goTo(current - 1);
+            else goTo(current + 1);
+        });
+    </script>
 
 </body>
+
 </html>

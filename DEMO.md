@@ -111,4 +111,4 @@ Step-by-step walkthrough for demonstrating NixWallet.
 - **Why a wallet?** — The entry point for every user. Privacy starts at the wallet level.
 - **What's unique?** — Standard wallets don't support confidential tokens. NixWallet integrates FHE natively, turning any ERC-20 into a confidential token (e.g., USDC to cUSDC).
 - **Registry pattern** — Any ERC-20 can be wrapped into a confidential variant. First user deploys the wrapper; everyone else shares it.
-- **What's next?** — live in-wallet swap execution (aggregator route), pending-to-confirmed lifecycle for dApp transactions, guided claim flow, final WalletGuide verification, and broader browser testing.
+- **What's next?** — live in-wallet swap execution (aggregator route), broader browser QA matrix, and production polish for launch messaging/analytics.

@@ -2,7 +2,7 @@
 
 **Standard wallets don’t support confidential tokens — every balance and transfer is a billboard on a public chain.** 
 
-Introducing **NixWallet**: a self-custodial Chrome extension wallet that wraps everyday ERC-20s into **FHERC20** confidential assets, sends **encrypted amounts** with Fhenix **coFHE**, and keeps the wallet one click away in the **side panel**.
+Introducing **NixWallet**: a self-custodial browser extension wallet to manage your confidential assets. Wrap everyday ERC-20s into **FHERC20** confidential assets, send **encrypted amounts** with Fhenix **coFHE**, connect to external dApps via the injected provider (EIP-1193 / EIP-6963) or WalletConnect, keep the wallet one click away in the **side panel**, and use **NixBot**—an automated conversational assistant that parses natural language into private on-chain actions.
 
 **Companion dApp:** [nixwalletdapp.vercel.app](https://nixwalletdapp.vercel.app) — a hosted reference site that shows how **any external dApp** can interact with NixWallet through the injected provider (EIP-1193 / EIP-6963) or WalletConnect, without building its own signing or approval UI.
 
@@ -85,6 +85,22 @@ Think in **three pillars**: **wrap (shield)**, **confidential use**, **unwrap (u
 ---
 
 ## Features
+
+### 🤖 NixBot — Conversational Assistant (Wave 5)
+
+NixBot is the flagship feature of Wave 5: a full natural-language transaction engine embedded in the side panel.
+
+- **NLP Command Parser** — Understands English commands like *"wrap 0.5 ETH"*, *"private send 10 cUSDC to Alice"*, *"claim all pending"*, *"reveal private balance"*, *"check balance"*, *"switch network to Base"*
+- **Contact Name Resolution** — Type a contact name (e.g. *"send 5 USDC to Alice"*) and NixBot resolves it from the address book automatically — no copy-pasting long hex strings
+- **Check Balance Command** — Say *"check balance"* or *"what's my USDC balance?"* to get a combined public + confidential balance view across all tokens in one message
+- **Network Switching** — Say *"switch to Base Sepolia"* or *"change network to Arbitrum"* and NixBot switches your active network and refreshes token data instantly
+- **Proactive Claim Notifications** — On load, NixBot silently scans all wrappers for pending unshield claims and proactively alerts you if any are ready to collect
+- **Gas Estimation** — Before every confirmation, NixBot fetches live `feeData` from the provider and displays an estimated gas cost in the preview so you always know the fee before signing
+- **Suggested Command Chips** — Quick-tap chips (*Wrap 0.1 ETH*, *Check Balances*, *Switch to Base*, *Claim All*) prepopulate the input for instant one-tap commands
+- **Secure Confirmation Flow** — Every state-changing action shows a preview (amount, token, recipient address, estimated gas) and requires explicit confirmation before execution
+- **Multi-step Progress** — Each execution stage streams its own status badge (In Progress / Completed / Failed) so you know exactly where a transaction is
+
+### 💎 Core Wallet Features
 
 - **Chrome Side Panel** — Persistent wallet UI opens in the browser side panel (Chrome 114+)
 - **Confidential Tokens** — Convert standard ERC-20 tokens into confidential FHERC20 variants (e.g., USDC becomes cUSDC) via an on-chain registry

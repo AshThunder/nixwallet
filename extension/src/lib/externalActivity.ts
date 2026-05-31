@@ -55,11 +55,17 @@ async function trackTransactionConfirmation(input: {
   source: 'dapp' | 'walletconnect';
 }) {
   try {
+    await patchActivity(input.hash, {
+      status: 'pending',
+      txStage: `${input.source}-awaiting-receipt`,
+    });
+
     const receipt = await pollTransactionReceipt(input.hash, input.network.rpc);
     if (!receipt) {
       await patchActivity(input.hash, {
-        status: 'pending',
+        status: 'error',
         txStage: `${input.source}-confirmation-timeout`,
+        errorCode: 'confirmation-timeout',
       });
       return;
     }
@@ -70,8 +76,9 @@ async function trackTransactionConfirmation(input: {
     });
   } catch {
     await patchActivity(input.hash, {
-      status: 'pending',
+      status: 'error',
       txStage: `${input.source}-confirmation-error`,
+      errorCode: 'confirmation-error',
     }).catch(() => {});
   }
 }

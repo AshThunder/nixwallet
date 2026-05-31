@@ -1,22 +1,31 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NixWallet — Confidential Wallet for the Fhenix Network</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
     <style>
-        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
         :root {
             --bg: #020617;
             --surface: #0f172a;
             --surface-elevated: #1e293b;
-            --border: rgba(255,255,255,0.06);
+            --border: rgba(255, 255, 255, 0.06);
             --cyan: #22d3ee;
             --cyan-active: #06b6d4;
-            --cyan-dim: rgba(34,211,238,0.15);
-            --cyan-glow: rgba(34,211,238,0.35);
+            --cyan-dim: rgba(34, 211, 238, 0.15);
+            --cyan-glow: rgba(34, 211, 238, 0.35);
             --white: #f8fafc;
             --sub: #94a3b8;
             --muted: #475569;
@@ -31,6 +40,7 @@
             scroll-behavior: smooth;
             -webkit-text-size-adjust: 100%;
         }
+
         body {
             background: var(--bg);
             color: var(--white);
@@ -40,9 +50,18 @@
         }
 
         /* ── Utility ───────────────────────── */
-        .mono { font-family: 'JetBrains Mono', monospace; }
-        .cyan { color: var(--cyan); }
-        .sub  { color: var(--sub); }
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .cyan {
+            color: var(--cyan);
+        }
+
+        .sub {
+            color: var(--sub);
+        }
+
         .container {
             max-width: 1100px;
             margin: 0 auto;
@@ -53,8 +72,9 @@
         .reveal {
             opacity: 0;
             transform: translateY(40px);
-            transition: opacity 0.8s cubic-bezier(.16,1,.3,1), transform 0.8s cubic-bezier(.16,1,.3,1);
+            transition: opacity 0.8s cubic-bezier(.16, 1, .3, 1), transform 0.8s cubic-bezier(.16, 1, .3, 1);
         }
+
         .reveal.visible {
             opacity: 1;
             transform: translateY(0);
@@ -62,20 +82,29 @@
 
         /* ── NAV ───────────────────────────── */
         nav {
-            position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
             padding: 0.85rem clamp(1rem, 4vw, 2rem);
-            display: flex; align-items: center; justify-content: space-between;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
             gap: 1rem;
-            background: rgba(2,6,23,0.85);
+            background: rgba(2, 6, 23, 0.85);
             backdrop-filter: blur(20px);
             border-bottom: 1px solid var(--border);
         }
+
         .nav-logo {
             font-size: clamp(1.05rem, 4vw, 1.3rem);
-            font-weight: 700; letter-spacing: -0.02em;
+            font-weight: 700;
+            letter-spacing: -0.02em;
             text-transform: uppercase;
             flex-shrink: 0;
         }
+
         .nav-links {
             display: flex;
             flex-wrap: wrap;
@@ -83,14 +112,21 @@
             justify-content: flex-end;
             gap: clamp(0.5rem, 2vw, 1.25rem) clamp(0.75rem, 2vw, 2rem);
         }
+
         .nav-links a {
-            color: var(--sub); text-decoration: none;
+            color: var(--sub);
+            text-decoration: none;
             font-size: clamp(0.65rem, 2.8vw, 0.85rem);
-            font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
             transition: color 0.2s;
             white-space: nowrap;
         }
-        .nav-links a:hover { color: var(--cyan); }
+
+        .nav-links a:hover {
+            color: var(--cyan);
+        }
 
         .nav-toggle {
             display: none;
@@ -107,34 +143,65 @@
             cursor: pointer;
             transition: border-color 0.2s, background 0.2s;
         }
-        .nav-toggle:hover { border-color: var(--cyan); background: var(--cyan-dim); }
-        .nav-toggle svg { width: 1.35rem; height: 1.35rem; }
-        .nav-toggle .icon-close { display: none; }
-        .nav-toggle[aria-expanded="true"] .icon-open { display: none; }
-        .nav-toggle[aria-expanded="true"] .icon-close { display: block; }
+
+        .nav-toggle:hover {
+            border-color: var(--cyan);
+            background: var(--cyan-dim);
+        }
+
+        .nav-toggle svg {
+            width: 1.35rem;
+            height: 1.35rem;
+        }
+
+        .nav-toggle .icon-close {
+            display: none;
+        }
+
+        .nav-toggle[aria-expanded="true"] .icon-open {
+            display: none;
+        }
+
+        .nav-toggle[aria-expanded="true"] .icon-close {
+            display: block;
+        }
 
         /* ── HERO ──────────────────────────── */
         .hero {
             min-height: 100dvh;
-            display: flex; align-items: center; justify-content: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             text-align: center;
             position: relative;
             overflow: hidden;
             padding: clamp(5.5rem, 12vw, 7rem) clamp(1rem, 4vw, 2rem) clamp(2.5rem, 7vw, 4rem);
         }
+
         .hero-glow {
             display: none;
         }
+
         @keyframes glow-pulse {
-            0%   { opacity: 0.25; transform: translate(-50%, -50%) scale(0.85); }
-            100% { opacity: 0.55; transform: translate(-50%, -50%) scale(1.15); }
+            0% {
+                opacity: 0.25;
+                transform: translate(-50%, -50%) scale(0.85);
+            }
+
+            100% {
+                opacity: 0.55;
+                transform: translate(-50%, -50%) scale(1.15);
+            }
         }
+
         .hero-content {
-            position: relative; z-index: 1;
+            position: relative;
+            z-index: 1;
             width: 100%;
             max-width: min(50rem, 100%);
             margin: 0 auto;
         }
+
         .hero-badge {
             display: inline-block;
             padding: 0.4rem clamp(0.75rem, 3vw, 1.2rem);
@@ -147,7 +214,19 @@
             margin-bottom: clamp(1.25rem, 4vw, 2.5rem);
             animation: badge-fade 1s 0.3s both;
         }
-        @keyframes badge-fade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        @keyframes badge-fade {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
         .hero h1 {
             font-size: clamp(2.25rem, 11vw, 7rem);
             font-weight: 700;
@@ -158,8 +237,24 @@
             word-break: break-word;
             hyphens: auto;
         }
-        @keyframes title-in { from { opacity: 0; transform: translateY(30px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
-        .hero h1 span { color: var(--cyan); text-shadow: 0 0 40px var(--cyan-glow); }
+
+        @keyframes title-in {
+            from {
+                opacity: 0;
+                transform: translateY(30px) scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .hero h1 span {
+            color: var(--cyan);
+            text-shadow: 0 0 40px var(--cyan-glow);
+        }
+
         .hero-sub {
             font-size: clamp(1rem, 4.2vw, 1.25rem);
             color: var(--sub);
@@ -170,8 +265,24 @@
             text-wrap: pretty;
             animation: sub-in 1s 0.8s both;
         }
-        .hero-sub strong { color: var(--white); font-weight: 600; }
-        @keyframes sub-in { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        .hero-sub strong {
+            color: var(--white);
+            font-weight: 600;
+        }
+
+        @keyframes sub-in {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
         .hero-cta {
             display: flex;
             flex-wrap: wrap;
@@ -180,6 +291,7 @@
             justify-content: center;
             animation: sub-in 1s 1.1s both;
         }
+
         .hero-cta a {
             padding: clamp(0.85rem, 2.5vw, 1rem) clamp(1.25rem, 4vw, 2rem);
             font-size: clamp(0.7rem, 2.8vw, 0.85rem);
@@ -191,15 +303,30 @@
             transition: background-color 0.2s, border-color 0.2s, color 0.2s, transform 0.2s;
             text-align: center;
         }
+
         .btn-primary {
-            background: var(--cyan); color: var(--bg);
+            background: var(--cyan);
+            color: var(--bg);
             border: 1px solid var(--cyan);
         }
-        .btn-primary:hover { background: var(--cyan-active); border-color: var(--cyan-active); transform: translateY(-2px); }
-        .btn-ghost {
-            border: 1px solid var(--border); color: var(--white); background: var(--surface);
+
+        .btn-primary:hover {
+            background: var(--cyan-active);
+            border-color: var(--cyan-active);
+            transform: translateY(-2px);
         }
-        .btn-ghost:hover { border-color: var(--cyan); color: var(--cyan); background: var(--surface-elevated); }
+
+        .btn-ghost {
+            border: 1px solid var(--border);
+            color: var(--white);
+            background: var(--surface);
+        }
+
+        .btn-ghost:hover {
+            border-color: var(--cyan);
+            color: var(--cyan);
+            background: var(--surface-elevated);
+        }
 
         .scroll-hint {
             position: absolute;
@@ -208,36 +335,61 @@
             transform: translateX(-50%);
             animation: bounce 2s infinite;
         }
+
         .scroll-hint span {
-            display: block; width: 20px; height: 20px;
-            border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted);
+            display: block;
+            width: 20px;
+            height: 20px;
+            border-right: 2px solid var(--muted);
+            border-bottom: 2px solid var(--muted);
             transform: rotate(45deg);
         }
+
         @keyframes bounce {
-            0%, 100% { transform: translateX(-50%) translateY(0); }
-            50% { transform: translateX(-50%) translateY(12px); }
+
+            0%,
+            100% {
+                transform: translateX(-50%) translateY(0);
+            }
+
+            50% {
+                transform: translateX(-50%) translateY(12px);
+            }
         }
 
         /* ── SECTION COMMON ────────────────── */
-        section { padding: var(--section-space) 0; }
+        section {
+            padding: var(--section-space) 0;
+        }
+
         .section-label {
             font-size: clamp(0.6rem, 2.5vw, 0.7rem);
             font-weight: 700;
             letter-spacing: clamp(0.15em, 1.5vw, 0.3em);
             text-transform: uppercase;
-            color: var(--cyan); margin-bottom: 1rem;
+            color: var(--cyan);
+            margin-bottom: 1rem;
         }
+
         .section-title {
             font-size: clamp(1.65rem, 6vw, 3rem);
-            font-weight: 700; letter-spacing: -0.03em;
+            font-weight: 700;
+            letter-spacing: -0.03em;
             line-height: 1.12;
             margin-bottom: 1.5rem;
             word-break: break-word;
         }
-        .section-title br { display: none; }
-        @media (min-width: 480px) {
-            .section-title br { display: inline; }
+
+        .section-title br {
+            display: none;
         }
+
+        @media (min-width: 480px) {
+            .section-title br {
+                display: inline;
+            }
+        }
+
         .section-desc {
             font-size: clamp(1rem, 3.5vw, 1.1rem);
             color: var(--sub);
@@ -252,6 +404,7 @@
             grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
             gap: clamp(1rem, 3vw, 1.5rem);
         }
+
         .feature-card {
             background: var(--surface);
             border: 1px solid var(--border);
@@ -261,37 +414,71 @@
             overflow: hidden;
             transition: border-color 0.3s, transform 0.3s;
         }
+
         .feature-card:hover {
-            border-color: rgba(34,211,238,0.3);
+            border-color: rgba(34, 211, 238, 0.3);
             transform: translateY(-4px);
         }
+
         .feature-card::before {
             content: '';
-            position: absolute; top: 0; left: 0;
-            width: 3px; height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 3px;
+            height: 100%;
             background: var(--cyan);
-            opacity: 0; transition: opacity 0.3s;
+            opacity: 0;
+            transition: opacity 0.3s;
         }
-        .feature-card:hover::before { opacity: 1; }
+
+        .feature-card:hover::before {
+            opacity: 1;
+        }
+
         .feature-icon {
-            width: 48px; height: 48px; margin-bottom: 1.5rem;
-            display: flex; align-items: center; justify-content: center;
+            width: 48px;
+            height: 48px;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             background: var(--cyan-dim);
-            border: 1px solid rgba(34,211,238,0.2);
+            border: 1px solid rgba(34, 211, 238, 0.2);
             border-radius: var(--radius-lg);
         }
-        .feature-icon svg { width: 24px; height: 24px; stroke: var(--cyan); fill: none; stroke-width: 1.5; }
-        .feature-card h3 {
-            font-size: 1.1rem; font-weight: 700;
-            margin-bottom: 0.75rem; letter-spacing: -0.02em;
+
+        .feature-icon svg {
+            width: 24px;
+            height: 24px;
+            stroke: var(--cyan);
+            fill: none;
+            stroke-width: 1.5;
         }
-        .feature-card p { font-size: 0.9rem; color: var(--sub); line-height: 1.6; }
+
+        .feature-card h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+            letter-spacing: -0.02em;
+        }
+
+        .feature-card p {
+            font-size: 0.9rem;
+            color: var(--sub);
+            line-height: 1.6;
+        }
+
         .feature-badge {
-            display: inline-block; margin-top: 1rem;
+            display: inline-block;
+            margin-top: 1rem;
             padding: 0.25rem 0.6rem;
-            font-size: 0.6rem; font-weight: 700;
-            text-transform: uppercase; letter-spacing: 0.15em;
-            color: var(--cyan); border: 1px solid rgba(34,211,238,0.3);
+            font-size: 0.6rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--cyan);
+            border: 1px solid rgba(34, 211, 238, 0.3);
         }
 
         .companion-landscape {
@@ -301,14 +488,20 @@
             margin-top: 1.25rem;
             padding: clamp(1.25rem, 3vw, 2rem);
         }
+
         .companion-landscape-top {
             display: grid;
             gap: 1.25rem 2rem;
             grid-template-columns: 1fr;
         }
+
         @media (min-width: 900px) {
-            .companion-landscape-top { grid-template-columns: 1.05fr 1fr; align-items: start; }
+            .companion-landscape-top {
+                grid-template-columns: 1.05fr 1fr;
+                align-items: start;
+            }
         }
+
         .companion-kicker {
             color: var(--cyan);
             font-size: 0.68rem;
@@ -317,6 +510,7 @@
             margin-bottom: 0.65rem;
             text-transform: uppercase;
         }
+
         .companion-intro h3 {
             font-size: clamp(1.15rem, 3vw, 1.45rem);
             font-weight: 700;
@@ -324,14 +518,23 @@
             line-height: 1.2;
             margin: 0 0 0.75rem;
         }
+
         .companion-intro p {
             color: var(--sub);
             font-size: clamp(0.92rem, 2.5vw, 1rem);
             line-height: 1.65;
             margin: 0 0 0.65rem;
         }
-        .companion-intro p strong { color: var(--white); }
-        .companion-intro a { color: var(--cyan); font-weight: 600; }
+
+        .companion-intro p strong {
+            color: var(--white);
+        }
+
+        .companion-intro a {
+            color: var(--cyan);
+            font-weight: 600;
+        }
+
         .companion-trust {
             border-left: 3px solid var(--cyan);
             color: var(--muted);
@@ -340,20 +543,26 @@
             margin: 0.75rem 0 0;
             padding-left: 0.85rem;
         }
+
         .companion-grid {
             display: grid;
             gap: 1rem;
             grid-template-columns: 1fr;
         }
+
         @media (min-width: 640px) {
-            .companion-grid { grid-template-columns: 1fr 1fr; }
+            .companion-grid {
+                grid-template-columns: 1fr 1fr;
+            }
         }
+
         .companion-card {
             background: rgb(2 6 23 / 0.65);
             border: 1px solid var(--border);
             border-radius: var(--radius-lg);
             padding: 1.1rem 1.15rem;
         }
+
         .companion-card h4 {
             color: var(--white);
             font-size: 0.72rem;
@@ -362,6 +571,7 @@
             margin: 0 0 0.65rem;
             text-transform: uppercase;
         }
+
         .companion-card ul {
             color: var(--sub);
             font-size: 0.86rem;
@@ -369,12 +579,17 @@
             margin: 0;
             padding-left: 1.1rem;
         }
-        .companion-card li + li { margin-top: 0.4rem; }
+
+        .companion-card li+li {
+            margin-top: 0.4rem;
+        }
+
         .companion-card code {
             color: var(--cyan);
             font-family: ui-monospace, monospace;
             font-size: 0.8em;
         }
+
         .companion-cta-row {
             border-top: 1px solid var(--border);
             display: flex;
@@ -383,6 +598,7 @@
             margin-top: 1.35rem;
             padding-top: 1.25rem;
         }
+
         .companion-cta-row a {
             padding: 0.85rem 1.35rem;
             font-size: 0.75rem;
@@ -393,25 +609,30 @@
             border-radius: var(--radius-md);
             transition: background-color 0.2s, border-color 0.2s, transform 0.2s;
         }
+
         .btn-companion-primary {
             background: var(--cyan);
             border: 1px solid var(--cyan);
             color: var(--bg);
         }
+
         .btn-companion-primary:hover {
             background: var(--cyan-active);
             border-color: var(--cyan-active);
             transform: translateY(-2px);
         }
+
         .btn-companion-secondary {
             background: #fff;
             border: 1px solid #fff;
             color: var(--bg);
         }
+
         .btn-companion-secondary:hover {
             border-color: var(--cyan);
             transform: translateY(-2px);
         }
+
         .story-lead {
             color: var(--sub);
             font-size: clamp(1rem, 2.6vw, 1.15rem);
@@ -419,25 +640,40 @@
             margin: 0 0 1.5rem;
             max-width: 52rem;
         }
-        .story-lead strong { color: var(--white); }
+
+        .story-lead strong {
+            color: var(--white);
+        }
 
         /* ── TECH STACK ────────────────────── */
         .tech-row {
-            display: flex; flex-wrap: wrap; gap: 1rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
             margin-top: 2rem;
         }
+
         .tech-pill {
             padding: 0.8rem 1.5rem;
             background: var(--surface);
             border: 1px solid var(--border);
             border-radius: var(--radius-lg);
-            font-size: 0.85rem; font-weight: 600;
-            display: flex; align-items: center; gap: 0.6rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
             transition: border-color 0.3s;
         }
-        .tech-pill:hover { border-color: rgba(34,211,238,0.3); }
+
+        .tech-pill:hover {
+            border-color: rgba(34, 211, 238, 0.3);
+        }
+
         .tech-dot {
-            width: 8px; height: 8px; background: var(--cyan);
+            width: 8px;
+            height: 8px;
+            background: var(--cyan);
             border-radius: 50%;
         }
 
@@ -450,20 +686,27 @@
             border: 1px solid var(--border);
             margin-top: clamp(1.5rem, 5vw, 3rem);
         }
+
         @media (min-width: 640px) {
-            .arch-grid { grid-template-columns: repeat(3, 1fr); }
+            .arch-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
         }
+
         .arch-cell {
             background: var(--surface);
             padding: clamp(1.25rem, 4vw, 2rem);
             text-align: center;
         }
+
         .arch-cell .number {
             font-size: clamp(1.75rem, 8vw, 2.5rem);
             font-weight: 900;
-            color: var(--cyan); letter-spacing: -0.04em;
+            color: var(--cyan);
+            letter-spacing: -0.04em;
             line-height: 1;
         }
+
         .arch-cell .label {
             font-size: clamp(0.65rem, 2.5vw, 0.75rem);
             font-weight: 600;
@@ -483,20 +726,29 @@
             border-top: 1px solid var(--border);
             padding-top: 4rem;
         }
+
         .creator-links {
-            display: flex; justify-content: center; gap: 2rem;
-            margin-top: 2rem; flex-wrap: wrap;
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-top: 2rem;
+            flex-wrap: wrap;
         }
+
         .creator-links a {
-            color: var(--sub); text-decoration: none;
-            font-size: 0.85rem; font-weight: 600;
+            color: var(--sub);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 600;
             padding: 0.6rem 1.2rem;
             border: 1px solid var(--border);
             border-radius: var(--radius-md);
             transition: all 0.3s;
         }
+
         .creator-links a:hover {
-            color: var(--cyan); border-color: var(--cyan);
+            color: var(--cyan);
+            border-color: var(--cyan);
         }
 
         /* ── FOOTER ────────────────────────── */
@@ -505,6 +757,7 @@
             text-align: center;
             border-top: 1px solid var(--border);
         }
+
         footer p {
             font-size: clamp(0.65rem, 2.5vw, 0.75rem);
             color: var(--muted);
@@ -517,7 +770,10 @@
         }
 
         @media (min-width: 769px) {
-            .nav-toggle { display: none !important; }
+            .nav-toggle {
+                display: none !important;
+            }
+
             .nav-links {
                 display: flex !important;
                 position: static !important;
@@ -530,6 +786,7 @@
                 box-shadow: none !important;
                 padding: 0 !important;
             }
+
             .nav-links a {
                 border-bottom: none !important;
                 padding: 0 !important;
@@ -538,7 +795,10 @@
         }
 
         @media (max-width: 768px) {
-            .nav-toggle { display: flex; }
+            .nav-toggle {
+                display: flex;
+            }
+
             .nav-links {
                 display: none;
                 position: fixed;
@@ -555,16 +815,24 @@
                 border: 1px solid var(--border);
                 border-radius: var(--radius-xl);
                 padding: 0.35rem 0;
-                box-shadow: 0 16px 48px rgba(0,0,0,0.45);
+                box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
             }
-            .nav-links.is-open { display: flex; }
+
+            .nav-links.is-open {
+                display: flex;
+            }
+
             .nav-links a {
                 white-space: normal;
                 padding: 0.95rem 1.25rem;
                 border-bottom: 1px solid var(--border);
                 font-size: 0.8rem;
             }
-            .nav-links a:last-child { border-bottom: none; }
+
+            .nav-links a:last-child {
+                border-bottom: none;
+            }
+
             .hero-cta {
                 flex-direction: column;
                 width: 100%;
@@ -572,293 +840,644 @@
                 margin-left: auto;
                 margin-right: auto;
             }
-            .hero-cta a { width: 100%; box-sizing: border-box; }
+
+            .hero-cta a {
+                width: 100%;
+                box-sizing: border-box;
+            }
+        }
+
+        .nixbot-details-grid {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: clamp(2rem, 5vw, 4rem);
+            margin-top: 3.5rem;
+            align-items: center;
+        }
+
+        .nixbot-text-column {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .nixbot-card-highlight {
+            border-left: 2px solid var(--cyan);
+            padding: 1.75rem;
+            background: rgba(34, 211, 238, 0.02);
+            border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+            border-top: 1px solid rgba(255, 255, 255, 0.02);
+            border-right: 1px solid rgba(255, 255, 255, 0.02);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+        }
+
+        .nixbot-card-highlight h4 {
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--white);
+            margin-bottom: 0.75rem;
+        }
+
+        .nixbot-card-highlight p,
+        .nixbot-card-highlight ul {
+            font-size: 0.88rem;
+            line-height: 1.6;
+            color: var(--sub);
+        }
+
+        .nixbot-card-highlight ul {
+            list-style: disc;
+            padding-left: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+
+        .nixbot-visual-column {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 2.25rem;
+            border-radius: var(--radius-xl);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+        }
+
+        .nixbot-header-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .nixbot-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .nixbot-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--cyan);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--cyan);
+            animation: pulse 2s infinite;
+        }
+
+        .nixbot-status-text {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--cyan);
+        }
+
+        .nixbot-net-text {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--muted);
+        }
+
+        .nixbot-chat {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .nixbot-msg-user {
+            align-self: flex-end;
+            background: var(--cyan-dim);
+            border: 1px solid rgba(34, 211, 238, 0.3);
+            padding: 0.85rem 1.25rem;
+            max-width: 85%;
+            font-size: 0.9rem;
+            border-radius: var(--radius-lg) var(--radius-lg) 0 var(--radius-lg);
+            color: var(--white);
+            box-shadow: 0 4px 12px rgba(34, 211, 238, 0.05);
+        }
+
+        .nixbot-msg-bot {
+            align-self: flex-start;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            padding: 1.25rem;
+            max-width: 90%;
+            font-size: 0.85rem;
+            border-radius: var(--radius-lg) var(--radius-lg) var(--radius-lg) 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .nixbot-msg-title {
+            color: var(--cyan);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 0.8rem;
+        }
+
+        .nixbot-msg-details {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--sub);
+            line-height: 1.6;
+        }
+
+        .nixbot-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.25rem;
+        }
+
+        .nixbot-btn-approve {
+            background: var(--cyan);
+            color: var(--bg);
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 0.4rem 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            box-shadow: 0 0 12px rgba(34, 211, 238, 0.2);
+        }
+
+        .nixbot-btn-cancel {
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--white);
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 0.4rem 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .nixbot-details-grid {
+                grid-template-columns: 1fr;
+                gap: 2.5rem;
+            }
         }
 
         @media (prefers-reduced-motion: reduce) {
-            html { scroll-behavior: auto; }
-            .reveal { transition: none; }
-            .hero-glow { animation: none; }
-            .scroll-hint { animation: none; }
+            html {
+                scroll-behavior: auto;
+            }
+
+            .reveal {
+                transition: none;
+            }
+
+            .hero-glow {
+                animation: none;
+            }
+
+            .scroll-hint {
+                animation: none;
+            }
         }
     </style>
 </head>
+
 <body>
 
-<!-- NAV -->
-<nav>
-    <div class="nav-logo">Nix<span class="cyan">Wallet</span></div>
-    <button type="button" class="nav-toggle" id="nav-toggle" aria-expanded="false" aria-controls="nav-menu" aria-label="Open menu">
-        <svg class="icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
-        <svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-    </button>
-    <div class="nav-links" id="nav-menu">
-        <a href="#companion-dapp">Companion dApp</a>
-        <a href="#features">Features</a>
-        <a href="#tech">Tech</a>
-        <a href="#architecture">Architecture</a>
-        <a href="slides.html">Tech slides</a>
-        <a href="slides-journey.html">Walkthrough</a>
-        <a href="/privacy">Privacy</a>
-        <a href="https://github.com/AshThunder/nixwallet" target="_blank" rel="noopener noreferrer">GitHub</a>
-    </div>
-</nav>
+    <!-- NAV -->
+    <nav>
+        <div class="nav-logo">Nix<span class="cyan">Wallet</span></div>
+        <button type="button" class="nav-toggle" id="nav-toggle" aria-expanded="false" aria-controls="nav-menu"
+            aria-label="Open menu">
+            <svg class="icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round">
+                <path d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+            <svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round">
+                <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+        </button>
+        <div class="nav-links" id="nav-menu">
+            <a href="#companion-dapp">Companion dApp</a>
+            <a href="#features">Features</a>
+            <a href="#tech">Tech</a>
+            <a href="#architecture">Architecture</a>
+            <a href="slides.html">Tech slides</a>
+            <a href="slides-journey.html">Walkthrough</a>
+            <a href="/privacy">Privacy</a>
+            <a href="https://github.com/AshThunder/nixwallet" target="_blank" rel="noopener noreferrer">GitHub</a>
+        </div>
+    </nav>
 
-<!-- HERO -->
-<section class="hero">
-    <div class="hero-glow"></div>
-    <div class="hero-content">
-        <h1>NIX<span>WALLET</span></h1>
-        <p class="hero-sub">The <strong>confidential</strong> Chrome extension wallet for <strong>Fhenix</strong>: <strong>FHERC20</strong> and <strong>coFHE</strong> in Chrome’s side panel. External sites connect via <strong>EIP-1193 / EIP-6963</strong> or <strong>WalletConnect</strong>—try the hosted <a href="https://nixwalletdapp.vercel.app" target="_blank" rel="noopener" style="color: var(--cyan);">companion dApp</a> to see a full integration demo.</p>
-        <div class="hero-cta">
-            <a href="https://chromewebstore.google.com/detail/nixwallet/nkkaidapildbkjmnfeieepmejghgmipi" target="_blank" class="btn-primary">Install on Chrome</a>
-            <a href="https://nixwalletdapp.vercel.app" target="_blank" rel="noopener" class="btn-primary">Try Companion dApp</a>
-            <a href="https://github.com/AshThunder/nixwallet" target="_blank" class="btn-ghost">View on GitHub</a>
-            <a href="slides-journey.html" class="btn-ghost">Walkthrough slides</a>
-            <a href="slides.html" class="btn-ghost">Tech slides</a>
-            <a href="https://fhenix.io" target="_blank" class="btn-ghost">Fhenix.io</a>
-        </div>
-    </div>
-    <div class="scroll-hint"><span></span></div>
-</section>
-
-<!-- FEATURES -->
-<section id="features">
-    <div class="container">
-        <div class="reveal">
-            <div class="section-label mono">Core Capabilities</div>
-            <h2 class="section-title">Privacy Without<br> Compromise</h2>
-            <p class="section-desc">NixWallet wraps Fhenix FHE into a Chrome extension—encrypted balances, multi-network testnets, in-wallet dApp approvals, and a companion dApp that shows how any external site can integrate.</p>
-        </div>
-
-        <div class="features-grid">
-            <div class="feature-card reveal">
-                <div class="feature-icon">
-                    <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                </div>
-                <h3>FHE Token Wrapping</h3>
-                <p>Seamlessly wrap any ERC-20 token into a fully homomorphic encrypted variant. Your balances and transactions remain confidential on-chain.</p>
-            </div>
-            <div class="feature-card reveal">
-                <div class="feature-icon">
-                    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                </div>
-                <h3>Multi-Account Management</h3>
-                <p>Derive unlimited HD accounts from a single seed phrase, or import external private keys. Switch between wallets instantly.</p>
-            </div>
-            <div class="feature-card reveal">
-                <div class="feature-icon">
-                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-                </div>
-                <h3>Native cETH + Multi-Network</h3>
-                <p>Wrap Sepolia ETH into confidential cETH, send privately, and unwrap back to native ETH. Live on Ethereum Sepolia and Base Sepolia with in-dashboard testnet faucets.</p>
-                <span class="feature-badge mono">Wave 4 Live</span>
-            </div>
-            <div class="feature-card reveal">
-                <div class="feature-icon">
-                    <svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>
-                </div>
-                <h3>Address Book</h3>
-                <p>Save and manage frequently used wallet addresses locally on your device. Quick-access your trusted contacts when sending assets.</p>
-            </div>
-            <div class="feature-card reveal">
-                <div class="feature-icon">
-                    <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-                </div>
-                <h3>In-Wallet Swaps</h3>
-                <p>Swap tab with token selectors, slippage, and quote preview — on-chain execution planned for a future release.</p>
-                <span class="feature-badge mono">Preview</span>
-            </div>
-            <div class="feature-card reveal">
-                <div class="feature-icon">
-                    <svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                </div>
-                <h3>DApp Connection Manager</h3>
-                <p>Review connected websites, revoke permissions, and approve injected dApp requests directly inside NixWallet. Approval is blocked until the wallet is unlocked.</p>
-                <span class="feature-badge mono">Wave 3 Live</span>
-            </div>
-            <div class="feature-card reveal">
-                <div class="feature-icon">
-                    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
-                </div>
-                <h3>Companion DApp</h3>
-                <p>Reference dApp for <strong>external sites</strong> connecting to NixWallet: initiates provider calls; NixWallet owns approvals. <a href="https://nixwalletdapp.vercel.app" target="_blank" rel="noopener">nixwalletdapp.vercel.app</a></p>
-                <span class="feature-badge mono">Wave 4</span>
-            </div>
-            <div class="feature-card reveal">
-                <div class="feature-icon">
-                    <svg viewBox="0 0 24 24"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 15l3-3 3 2 5-6"/></svg>
-                </div>
-                <h3>External Activity</h3>
-                <p>Activity decodes ERC-20 symbols, wrapper shields, and native cETH flows from dApp and WalletConnect submissions with richer token labels.</p>
-                <span class="feature-badge mono">Wave 4</span>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- TECH STACK -->
-<section id="tech" style="background: var(--surface);">
-    <div class="container">
-        <div class="reveal">
-            <div class="section-label mono">Under the Hood</div>
-            <h2 class="section-title">Built With Modern Tools</h2>
-            <p class="section-desc">NixWallet is engineered with a production-grade stack, combining the latest in frontend performance with cutting-edge cryptographic libraries.</p>
-        </div>
-        <div class="tech-row reveal">
-            <div class="tech-pill"><span class="tech-dot"></span> React 19</div>
-            <div class="tech-pill"><span class="tech-dot"></span> TypeScript</div>
-            <div class="tech-pill"><span class="tech-dot"></span> Vite</div>
-            <div class="tech-pill"><span class="tech-dot"></span> Tailwind CSS v4</div>
-            <div class="tech-pill"><span class="tech-dot"></span> CRXJS</div>
-            <div class="tech-pill"><span class="tech-dot"></span> Framer Motion</div>
-            <div class="tech-pill"><span class="tech-dot"></span> Fhenix coFHE SDK</div>
-            <div class="tech-pill"><span class="tech-dot"></span> ethers.js v6</div>
-            <div class="tech-pill"><span class="tech-dot"></span> EIP-1193 / EIP-6963</div>
-            <div class="tech-pill"><span class="tech-dot"></span> WalletConnect v2</div>
-        </div>
-    </div>
-</section>
-
-<!-- ARCHITECTURE -->
-<section id="architecture">
-    <div class="container">
-        <div class="reveal">
-            <div class="section-label mono">At a Glance</div>
-            <h2 class="section-title">Project Architecture</h2>
-            <p class="section-desc">A clean, unidirectional architecture designed for extension constraints—fast renders, minimal storage overhead, and encrypted-first data flow.</p>
-        </div>
-        <div class="arch-grid reveal">
-            <div class="arch-cell">
-                <div class="number">12+</div>
-                <div class="label">Screens</div>
-            </div>
-            <div class="arch-cell">
-                <div class="number">3</div>
-                <div class="label">Supported testnets</div>
-            </div>
-            <div class="arch-cell">
-                <div class="number">FHE</div>
-                <div class="label">Encryption</div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- COMPANION DAPP -->
-<section id="companion-dapp" style="background: var(--surface);">
-    <div class="container">
-        <div class="reveal">
-            <div class="section-label mono">Companion dApp</div>
-            <h2 class="section-title">We Built a Reference Site<br>to Showcase NixWallet</h2>
-            <p class="story-lead">
-                We built a <strong>Chrome extension wallet</strong> and a <strong>hosted companion dApp</strong> to make confidential Fhenix flows feel familiar in the browser—wrap public tokens, send encrypted amounts, unwrap, and claim—while proving that <strong>any external site</strong> can connect through the same provider without shipping a second signing UI.
+    <!-- HERO -->
+    <section class="hero">
+        <div class="hero-glow"></div>
+        <div class="hero-content">
+            <h1>NIX<span>WALLET</span></h1>
+            <p class="hero-sub">A <strong>confidential</strong> wallet powered by
+                <strong>Fhenix</strong>—wrap tokens into <strong>FHERC20</strong>, send encrypted transfers, and decrypt
+                balances with <strong>coFHE</strong>. Connect external sites via <strong>EIP-1193 / EIP-6963</strong> or
+                <strong>WalletConnect</strong>. Includes <strong>NixBot</strong>, a conversational assistant that
+                executes on-chain actions from plain English. Try the hosted <a href="https://nixwalletdapp.vercel.app"
+                    target="_blank" rel="noopener" style="color: var(--cyan);">companion dApp</a> for a full integration
+                demo.
             </p>
-            <p class="story-lead">
-                The companion at <a href="https://nixwalletdapp.vercel.app" target="_blank" rel="noopener" style="color: var(--cyan); font-weight: 600;">nixwalletdapp.vercel.app</a> exists so developers can copy a real integration on <strong>Ethereum Sepolia</strong>, <strong>Base Sepolia</strong>, and <strong>Arbitrum Sepolia</strong> with Fhenix FHE, and so judges and users can try the full path in one click.
-            </p>
-            <div class="companion-landscape">
-                <div class="companion-landscape-top">
-                    <div class="companion-intro">
-                        <div class="companion-kicker">Live showcase</div>
-                        <h3>Try the live integration</h3>
-                        <p>
-                            Connect from the site, approve in the NixWallet side panel, and walk through wrap → confidential send → unwrap → claim. The companion never holds keys—it only calls <code style="color: var(--cyan);">eth_*</code> on the injected provider.
-                        </p>
-                        <p class="companion-trust">
-                            The companion dApp never stores private keys or shows trusted transaction modals. It only calls the provider; NixWallet owns every approval.
-                        </p>
+            <div class="hero-cta">
+                <a href="https://chromewebstore.google.com/detail/nixwallet/nkkaidapildbkjmnfeieepmejghgmipi"
+                    target="_blank" class="btn-primary">Install on Chrome</a>
+                <a href="https://nixwalletdapp.vercel.app" target="_blank" rel="noopener" class="btn-primary">Try
+                    Companion dApp</a>
+                <a href="https://github.com/AshThunder/nixwallet" target="_blank" class="btn-ghost">View on GitHub</a>
+                <a href="slides-journey.html" class="btn-ghost">Walkthrough slides</a>
+                <a href="slides.html" class="btn-ghost">Tech slides</a>
+                <a href="https://fhenix.io" target="_blank" class="btn-ghost">Fhenix.io</a>
+            </div>
+        </div>
+        <div class="scroll-hint"><span></span></div>
+    </section>
+
+    <!-- FEATURES -->
+    <section id="features">
+        <div class="container">
+            <div class="reveal">
+                <div class="section-label mono">Core Capabilities</div>
+                <h2 class="section-title">Privacy Without<br> Compromise</h2>
+                <p class="section-desc">NixWallet wraps Fhenix FHE into a browser extension—encrypted balances,
+                    multi-network testnets, in-wallet dApp approvals, and a companion dApp that shows how any external
+                    site can integrate.</p>
+            </div>
+
+            <div class="features-grid">
+                <div class="feature-card reveal">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                        </svg>
                     </div>
-                    <div class="companion-grid">
-                        <div class="companion-card">
-                            <h4>What it showcases</h4>
-                            <ul>
-                                <li>Native ETH → cETH (<code>shieldNative</code>)</li>
-                                <li>Public ERC-20 transfer, wrap, and unwrap</li>
-                                <li>Confidential FHERC20 send and claim flows</li>
-                                <li>Activity from this site in NixWallet history</li>
-                            </ul>
-                        </div>
-                        <div class="companion-card">
-                            <h4>How sites connect</h4>
-                            <ul>
-                                <li><strong>EIP-6963</strong> — <code>eth_requestAccounts</code>, <code>eth_sendTransaction</code>, typed data</li>
-                                <li><strong>WalletConnect v2</strong> — Reown pairing; WalletGuide-listed</li>
-                                <li><strong>Side panel</strong> — connect / sign / send confirmed in-wallet</li>
-                                <li><strong>Open source</strong> — copy patterns from <code>dapp/</code> in the repo</li>
-                            </ul>
-                        </div>
-                    </div>
+                    <h3>FHE Token Wrapping</h3>
+                    <p>Seamlessly wrap any ERC-20 token into a fully homomorphic encrypted variant. Your balances and
+                        transactions remain confidential on-chain.</p>
                 </div>
-                <div class="companion-cta-row">
-                    <a href="https://nixwalletdapp.vercel.app" target="_blank" rel="noopener" class="btn-companion-primary">Open Companion dApp</a>
-                    <a href="https://github.com/AshThunder/nixwallet/tree/main/dapp" target="_blank" rel="noopener" class="btn-companion-secondary">View dApp Source</a>
+                <div class="feature-card reveal">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                            <circle cx="9" cy="7" r="4" />
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                        </svg>
+                    </div>
+                    <h3>Multi-Account Management</h3>
+                    <p>Derive unlimited HD accounts from a single seed phrase, or import external private keys. Switch
+                        between wallets instantly.</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="10" />
+                            <line x1="2" y1="12" x2="22" y2="12" />
+                            <path
+                                d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                        </svg>
+                    </div>
+                    <h3>Native cETH + Multi-Network</h3>
+                    <p>Wrap Sepolia ETH into confidential cETH, send privately, and unwrap back to native ETH. Live on
+                        Ethereum Sepolia and Base Sepolia with in-dashboard testnet faucets.</p>
+                    <span class="feature-badge mono">Wave 4 Live</span>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z" />
+                        </svg>
+                    </div>
+                    <h3>Address Book</h3>
+                    <p>Save and manage frequently used wallet addresses locally on your device. Quick-access your
+                        trusted contacts when sending assets.</p>
+                </div>
+
+                <div class="feature-card reveal">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                        </svg>
+                    </div>
+                    <h3>DApp Connection Manager</h3>
+                    <p>Review connected websites, revoke permissions, and approve injected dApp requests directly inside
+                        NixWallet. Approval is blocked until the wallet is unlocked.</p>
+                    <span class="feature-badge mono">Wave 3 Live</span>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24">
+                            <rect x="3" y="4" width="18" height="14" rx="2" />
+                            <path d="M8 21h8" />
+                            <path d="M12 17v4" />
+                        </svg>
+                    </div>
+                    <h3>Companion DApp</h3>
+                    <p>Reference dApp for <strong>external sites</strong> connecting to NixWallet: initiates provider
+                        calls; NixWallet owns approvals. <a href="https://nixwalletdapp.vercel.app" target="_blank"
+                            rel="noopener">nixwalletdapp.vercel.app</a></p>
+                    <span class="feature-badge mono">Wave 4</span>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M4 19V5" />
+                            <path d="M4 19h16" />
+                            <path d="M8 15l3-3 3 2 5-6" />
+                        </svg>
+                    </div>
+                    <h3>External Activity</h3>
+                    <p>Activity decodes ERC-20 symbols, wrapper shields, and native cETH flows from dApp and
+                        WalletConnect submissions with richer token labels.</p>
+                    <span class="feature-badge mono">Wave 4</span>
+                </div>
+                <div class="feature-card reveal"
+                    style="border-color: rgba(10,217,220,0.4); background: rgba(10,217,220,0.03);">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10" />
+                            <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+                            <line x1="9" y1="9" x2="9.01" y2="9" />
+                            <line x1="15" y1="9" x2="15.01" y2="9" />
+                        </svg>
+                    </div>
+                    <h3>NixBot Conversational Assistant</h3>
+                    <p>An integrated smart assistant in the side panel. Type commands like <em>"send 10 cUSDC to
+                            Alice"</em> to build and make transactions instantly.</p>
+                    <span class="feature-badge mono" style="margin-top: 1rem;">Wave 5 Live</span>
                 </div>
             </div>
         </div>
-    </div>
-</section>
+    </section>
 
-
-<!-- CREATOR -->
-<section>
-    <div class="container">
-        <div class="creator-section reveal">
-            <div class="section-label mono">Created By</div>
-            <h2 class="section-title" style="margin-bottom: 0.5rem;">Chris Gold</h2>
-            <p class="sub" style="font-size: 1rem;">@ChrisGold__</p>
-            <div class="creator-links">
-                <a href="https://chromewebstore.google.com/detail/nixwallet/nkkaidapildbkjmnfeieepmejghgmipi" target="_blank">Install on Chrome</a>
-                <a href="https://nixwalletdapp.vercel.app" target="_blank" rel="noopener">Companion dApp</a>
-                <a href="slides-journey.html">Walkthrough slides</a>
-                <a href="slides.html">Tech slides</a>
-                <a href="https://x.com/ChrisGold__" target="_blank">X / Twitter</a>
-                <a href="https://github.com/AshThunder/nixwallet" target="_blank">GitHub</a>
-                <a href="https://x.com/fhenix" target="_blank">@Fhenix</a>
-                <a href="https://fhenix.io" target="_blank">Fhenix.io</a>
+    <!-- TECH STACK -->
+    <section id="tech" style="background: var(--surface);">
+        <div class="container">
+            <div class="reveal">
+                <div class="section-label mono">Under the Hood</div>
+                <h2 class="section-title">Built With Modern Tools</h2>
+                <p class="section-desc">NixWallet is engineered with a production-grade stack, combining the latest in
+                    frontend performance with cutting-edge cryptographic libraries.</p>
+            </div>
+            <div class="tech-row reveal">
+                <div class="tech-pill"><span class="tech-dot"></span> React 19</div>
+                <div class="tech-pill"><span class="tech-dot"></span> TypeScript</div>
+                <div class="tech-pill"><span class="tech-dot"></span> Vite</div>
+                <div class="tech-pill"><span class="tech-dot"></span> Tailwind CSS v4</div>
+                <div class="tech-pill"><span class="tech-dot"></span> CRXJS</div>
+                <div class="tech-pill"><span class="tech-dot"></span> Framer Motion</div>
+                <div class="tech-pill"><span class="tech-dot"></span> Fhenix coFHE SDK</div>
+                <div class="tech-pill"><span class="tech-dot"></span> ethers.js v6</div>
+                <div class="tech-pill"><span class="tech-dot"></span> EIP-1193 / EIP-6963</div>
+                <div class="tech-pill"><span class="tech-dot"></span> WalletConnect v2</div>
+                <div class="tech-pill"><span class="tech-dot"></span> NixBot NLP Engine</div>
             </div>
         </div>
-    </div>
-</section>
+    </section>
 
-<!-- FOOTER -->
-<footer>
-    <p class="mono">NixWallet &middot; 2026 &middot; Built on Fhenix &middot; <a href="https://nixwalletdapp.vercel.app" target="_blank" rel="noopener" style="color: var(--cyan); text-decoration: none;">Companion dApp</a> &middot; <a href="slides-journey.html" style="color: var(--cyan); text-decoration: none;">Walkthrough</a> &middot; <a href="slides.html" style="color: var(--cyan); text-decoration: none;">Tech slides</a> &middot; <a href="/privacy" style="color: var(--cyan); text-decoration: none;">Privacy Policy</a></p>
-</footer>
+    <!-- ARCHITECTURE -->
+    <section id="architecture">
+        <div class="container">
+            <div class="reveal">
+                <div class="section-label mono">At a Glance</div>
+                <h2 class="section-title">Project Architecture</h2>
+                <p class="section-desc">A clean, unidirectional architecture designed for extension constraints—fast
+                    renders, minimal storage overhead, and encrypted-first data flow.</p>
+            </div>
+            <div class="arch-grid reveal">
+                <div class="arch-cell">
+                    <div class="number">12+</div>
+                    <div class="label">Screens</div>
+                </div>
+                <div class="arch-cell">
+                    <div class="number">3</div>
+                    <div class="label">Supported testnets</div>
+                </div>
+                <div class="arch-cell">
+                    <div class="number">FHE</div>
+                    <div class="label">Encryption</div>
+                </div>
+            </div>
+        </div>
+    </section>
 
-<script>
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('visible');
+    <!-- NIXBOT CONVERSATIONAL ASSISTANT -->
+    <section id="nixbot" style="background: var(--bg);">
+        <div class="container">
+            <div class="reveal">
+                <div class="section-label mono">Wave 5 Highlight</div>
+                <h2 class="section-title">NixBot: Conversational Assistant</h2>
+                <p class="section-desc">A text-based transaction assistant embedded in NixWallet. Skip the
+                    forms — type what you want in plain English and NixBot builds, previews, and submits the transaction
+                    for you.</p>
+            </div>
+
+            <div class="nixbot-details-grid reveal">
+                <div class="nixbot-text-column">
+                    <div class="nixbot-card-highlight">
+                        <h4>What NixBot Does</h4>
+                        <p>NixBot is a text-based transaction engine built into the wallet's side panel. Type a command
+                            like <strong>"send 10 cUSDC to Alice"</strong> and it parses your intent, resolves contact
+                            names to on-chain addresses, estimates gas fees, and presents a ready-to-sign transaction —
+                            no forms, no dropdowns, no manual address entry.</p>
+                    </div>
+                    <div class="nixbot-card-highlight">
+                        <h4>Key Capabilities</h4>
+                        <ul>
+                            <li><strong>Wrap & Unwrap</strong> — Shield public tokens into FHERC20 confidential wrappers
+                                and back. <em>e.g., "wrap 5 USDC" · "unwrap 2 cUSDC"</em></li>
+                            <li><strong>Send & Transfer</strong> — Send public or confidential tokens to any address or
+                                saved contact by name. <em>e.g., "send 10 cUSDC to Alice"</em></li>
+                            <li><strong>Balance Overview</strong> — Returns both public and confidential balances for
+                                every token in one response. <em>e.g., "check balance"</em></li>
+                            <li><strong>Network Switching</strong> — Switch between Ethereum Sepolia, Base Sepolia, and
+                                Arbitrum Sepolia by name. <em>e.g., "switch to Base Sepolia"</em></li>
+                            <li><strong>Claim Pending Unshields</strong> — Claim tokens that have finished the FHE
+                                unshield process. <em>e.g., "claim all"</em></li>
+                            <li><strong>Live Gas Estimates</strong> — Every transaction preview automatically includes a
+                                real-time gas cost before you confirm.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="nixbot-visual-column">
+                    <div class="nixbot-header-bar">
+                        <div class="nixbot-status">
+                            <div class="nixbot-dot"></div>
+                            <span class="nixbot-status-text">NixBot Active</span>
+                        </div>
+                        <span class="nixbot-net-text">multi-chain</span>
+                    </div>
+
+                    <div class="nixbot-chat">
+                        <div class="nixbot-msg-user">
+                            send 10 cUSDC to Alice
+                        </div>
+                        <div class="nixbot-msg-bot">
+                            <span class="nixbot-msg-title">Transaction Preview</span>
+                            <div class="nixbot-msg-details">
+                                • Recipient: Alice (0x742d...44e)<br>
+                                • Asset: cUSDC (Confidential)<br>
+                                • Amount: 10.00 cUSDC<br>
+                                • Est. Gas: 0.0003 ETH
+                            </div>
+                            <div class="nixbot-actions">
+                                <span class="nixbot-btn-approve">Confirm Send</span>
+                                <span class="nixbot-btn-cancel">Cancel</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- COMPANION DAPP -->
+    <section id="companion-dapp" style="background: var(--surface);">
+        <div class="container">
+            <div class="reveal">
+                <div class="section-label mono">Companion dApp</div>
+                <h2 class="section-title">We Built a Reference Site<br>to Showcase NixWallet</h2>
+                <p class="story-lead">
+                    We built a <strong>browser extension wallet</strong> and a <strong>hosted companion dApp</strong> to
+                    make confidential Fhenix flows feel familiar in the browser—wrap public tokens, send encrypted
+                    amounts, unwrap, and claim—while proving that <strong>any external site</strong> can connect through
+                    the same provider without shipping a second signing UI.
+                </p>
+                <p class="story-lead">
+                    The companion at <a href="https://nixwalletdapp.vercel.app" target="_blank" rel="noopener"
+                        style="color: var(--cyan); font-weight: 600;">nixwalletdapp.vercel.app</a> exists so developers
+                    can copy a real integration on <strong>Ethereum Sepolia</strong>, <strong>Base Sepolia</strong>, and
+                    <strong>Arbitrum Sepolia</strong> with Fhenix FHE, and so judges and users can try the full path in
+                    one click.
+                </p>
+                <div class="companion-landscape">
+                    <div class="companion-landscape-top">
+                        <div class="companion-intro">
+                            <div class="companion-kicker">Live showcase</div>
+                            <h3>Try the live integration</h3>
+                            <p>
+                                Connect from the site, approve in the NixWallet side panel, and walk through wrap →
+                                confidential send → unwrap → claim. The companion never holds keys—it only calls <code
+                                    style="color: var(--cyan);">eth_*</code> on the injected provider.
+                            </p>
+                            <p class="companion-trust">
+                                The companion dApp never stores private keys or shows trusted transaction modals. It
+                                only calls the provider; NixWallet owns every approval.
+                            </p>
+                        </div>
+                        <div class="companion-grid">
+                            <div class="companion-card">
+                                <h4>What it showcases</h4>
+                                <ul>
+                                    <li>Native ETH → cETH (<code>shieldNative</code>)</li>
+                                    <li>Public ERC-20 transfer, wrap, and unwrap</li>
+                                    <li>Confidential FHERC20 send and claim flows</li>
+                                    <li>Activity from this site in NixWallet history</li>
+                                </ul>
+                            </div>
+                            <div class="companion-card">
+                                <h4>How sites connect</h4>
+                                <ul>
+                                    <li><strong>EIP-6963</strong> — <code>eth_requestAccounts</code>,
+                                        <code>eth_sendTransaction</code>, typed data
+                                    </li>
+                                    <li><strong>WalletConnect v2</strong> — Reown pairing; WalletGuide-listed</li>
+                                    <li><strong>Side panel</strong> — connect / sign / send confirmed in-wallet</li>
+                                    <li><strong>Open source</strong> — copy patterns from <code>dapp/</code> in the repo
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="companion-cta-row">
+                        <a href="https://nixwalletdapp.vercel.app" target="_blank" rel="noopener"
+                            class="btn-companion-primary">Open Companion dApp</a>
+                        <a href="https://github.com/AshThunder/nixwallet/tree/main/dapp" target="_blank" rel="noopener"
+                            class="btn-companion-secondary">View dApp Source</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+    <!-- CREATOR -->
+    <section>
+        <div class="container">
+            <div class="creator-section reveal">
+                <div class="section-label mono">Created By Team</div>
+                <h2 class="section-title" style="margin-bottom: 0.5rem;">Goldtek</h2>
+                <p class="sub" style="font-size: 1rem;">Goldtek</p>
+                <div class="creator-links">
+                    <a href="https://chromewebstore.google.com/detail/nixwallet/nkkaidapildbkjmnfeieepmejghgmipi"
+                        target="_blank">Install on Chrome</a>
+                    <a href="https://nixwalletdapp.vercel.app" target="_blank" rel="noopener">Companion dApp</a>
+                    <a href="slides-journey.html">Walkthrough slides</a>
+                    <a href="slides.html">Tech slides</a>
+                    <a href="https://x.com/ChrisGold__" target="_blank">X / Twitter</a>
+                    <a href="https://github.com/AshThunder/nixwallet" target="_blank">GitHub</a>
+                    <a href="https://x.com/fhenix" target="_blank">@Fhenix</a>
+                    <a href="https://fhenix.io" target="_blank">Fhenix.io</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer>
+        <p class="mono">NixWallet &middot; 2026 &middot; Built on Fhenix &middot; <a
+                href="https://nixwalletdapp.vercel.app" target="_blank" rel="noopener"
+                style="color: var(--cyan); text-decoration: none;">Companion dApp</a> &middot; <a
+                href="slides-journey.html" style="color: var(--cyan); text-decoration: none;">Walkthrough</a> &middot;
+            <a href="slides.html" style="color: var(--cyan); text-decoration: none;">Tech slides</a> &middot; <a
+                href="/privacy" style="color: var(--cyan); text-decoration: none;">Privacy Policy</a>
+        </p>
+    </footer>
+
+    <script>
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, { threshold: 0.15 });
+
+        document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+        (function () {
+            const toggle = document.getElementById('nav-toggle');
+            const menu = document.getElementById('nav-menu');
+            if (!toggle || !menu) return;
+
+            function setOpen(open) {
+                menu.classList.toggle('is-open', open);
+                toggle.setAttribute('aria-expanded', String(open));
+                toggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
             }
-        });
-    }, { threshold: 0.15 });
 
-    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+            toggle.addEventListener('click', () => setOpen(!menu.classList.contains('is-open')));
 
-    (function () {
-        const toggle = document.getElementById('nav-toggle');
-        const menu = document.getElementById('nav-menu');
-        if (!toggle || !menu) return;
+            menu.querySelectorAll('a').forEach((a) => {
+                a.addEventListener('click', () => setOpen(false));
+            });
 
-        function setOpen(open) {
-            menu.classList.toggle('is-open', open);
-            toggle.setAttribute('aria-expanded', String(open));
-            toggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
-        }
-
-        toggle.addEventListener('click', () => setOpen(!menu.classList.contains('is-open')));
-
-        menu.querySelectorAll('a').forEach((a) => {
-            a.addEventListener('click', () => setOpen(false));
-        });
-
-        window.addEventListener('resize', () => {
-            if (window.matchMedia('(min-width: 769px)').matches) setOpen(false);
-        });
-    })();
-</script>
+            window.addEventListener('resize', () => {
+                if (window.matchMedia('(min-width: 769px)').matches) setOpen(false);
+            });
+        })();
+    </script>
 
 </body>
+
 </html>

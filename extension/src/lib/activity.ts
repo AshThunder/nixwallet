@@ -2,7 +2,7 @@
  * Activity — Local transaction history tracking
  */
 
-export type ActivityType = 'send' | 'receive' | 'wrap' | 'unwrap' | 'confidential-transfer' | 'swap';
+export type ActivityType = 'send' | 'receive' | 'wrap' | 'unwrap' | 'confidential-transfer';
 
 export interface Activity {
   id: string;

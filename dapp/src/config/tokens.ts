@@ -22,8 +22,22 @@ export const DEFAULT_TOKENS_BY_NETWORK: Record<DappNetwork['id'], DefaultToken[]
       decimals: 6,
     },
   ],
-  baseSepolia: [],
-  arbitrumSepolia: [],
+  baseSepolia: [
+    {
+      symbol: 'USDC',
+      name: 'USD Coin',
+      address: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
+      decimals: 6,
+    },
+  ],
+  arbitrumSepolia: [
+    {
+      symbol: 'USDC',
+      name: 'USD Coin',
+      address: '0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d',
+      decimals: 6,
+    },
+  ],
 };
 
 export function getDefaultTokens(network: DappNetwork | null): DefaultToken[] {

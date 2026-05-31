@@ -26,8 +26,26 @@ export const VERIFIED_TOKENS: Record<string, VerifiedTokenMeta[]> = {
       min24hVolumeUsd: 500000,
     },
   ],
-  baseSepolia: [],
-  arbitrumSepolia: [],
+  baseSepolia: [
+    {
+      address: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
+      symbol: 'USDC',
+      name: 'USD Coin',
+      decimals: 6,
+      coingeckoId: 'usd-coin',
+      min24hVolumeUsd: 500000,
+    },
+  ],
+  arbitrumSepolia: [
+    {
+      address: '0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d',
+      symbol: 'USDC',
+      name: 'USD Coin',
+      decimals: 6,
+      coingeckoId: 'usd-coin',
+      min24hVolumeUsd: 500000,
+    },
+  ],
 };
 
 export function getVerifiedTokenMeta(networkId: string, address: string): VerifiedTokenMeta | null {

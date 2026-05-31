@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, ArrowRight, Loader2, CheckCircle, AlertCircle, ChevronDown, Eye, Lock, ExternalLink } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Loader2, CheckCircle, AlertCircle, ChevronDown, Eye, Lock, ExternalLink, RefreshCw } from 'lucide-react';
 import { getSigner, getActiveNetwork, getProvider, formatUnitsDisplay } from '../lib/wallet';
 import {
   getWrapperAddress,
@@ -10,6 +10,7 @@ import {
   isNativeWrapperConfigured,
   NATIVE_TOKEN_METADATA,
   shieldNative,
+  waitForAllowance,
   WRAPPER_ABI,
 } from '../lib/contracts';
 import { initCofheClient, decryptForTx, decryptForView, FheTypes } from '../lib/cofhe';
@@ -22,7 +23,14 @@ import { ethers } from 'ethers';
 interface Props {
   address: string;
   privateKey: string;
-  initialToken?: { symbol: string; address: string; decimals?: number } | null;
+  initialToken?: {
+    symbol: string;
+    address: string;
+    decimals?: number;
+    draftMode?: 'wrap' | 'unwrap';
+    draftAmount?: string;
+    draftClaimAll?: boolean;
+  } | null;
   onBack: () => void;
 }
 
@@ -45,6 +53,8 @@ export default function WrapUnwrap({ address: _address, privateKey, initialToken
   const [pendingClaims, setPendingClaims] = useState<{ ctHash: string; claimed: boolean }[]>([]);
   const [batchClaimStatus, setBatchClaimStatus] = useState<string | null>(null);
   const [claimAttemptErrors, setClaimAttemptErrors] = useState<Record<string, string>>({});
+  const [refreshingClaims, setRefreshingClaims] = useState(false);
+  const [claimingCtHash, setClaimingCtHash] = useState<string | null>(null);
 
   const registryConfigured = getRegistryAddress() !== ethers.ZeroAddress;
 
@@ -70,6 +80,12 @@ export default function WrapUnwrap({ address: _address, privateKey, initialToken
     })();
   }, [initialToken]);
 
+  useEffect(() => {
+    if (!initialToken) return;
+    if (initialToken.draftMode) setMode(initialToken.draftMode);
+    if (initialToken.draftAmount) setAmount(initialToken.draftAmount);
+  }, [initialToken?.draftMode, initialToken?.draftAmount]);
+
   // Check if a wrapper exists for selected token
   useEffect(() => {
     if (!selectedToken) { setWrapperReady(null); return; }
@@ -93,10 +109,11 @@ export default function WrapUnwrap({ address: _address, privateKey, initialToken
   }, [selectedToken, registryConfigured]);
 
   const checkPendingClaims = async () => {
-    if (!selectedToken) { setPendingClaims([]); return; }
+    setRefreshingClaims(true);
+    if (!selectedToken) { setPendingClaims([]); setRefreshingClaims(false); return; }
     const native = isNativeTokenAddress(selectedToken.address);
-    if (native && !isNativeWrapperConfigured(getActiveNetwork().id)) { setPendingClaims([]); return; }
-    if (!native && !registryConfigured) { setPendingClaims([]); return; }
+    if (native && !isNativeWrapperConfigured(getActiveNetwork().id)) { setPendingClaims([]); setRefreshingClaims(false); return; }
+    if (!native && !registryConfigured) { setPendingClaims([]); setRefreshingClaims(false); return; }
     try {
       const provider = getProvider();
       const wrapperAddr = await getWrapperAddress(provider, selectedToken.address);
@@ -108,6 +125,8 @@ export default function WrapUnwrap({ address: _address, privateKey, initialToken
     } catch {
       setPendingClaims([]);
       setClaimAttemptErrors({});
+    } finally {
+      setRefreshingClaims(false);
     }
   };
 
@@ -116,6 +135,15 @@ export default function WrapUnwrap({ address: _address, privateKey, initialToken
     else setPendingClaims([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- checkPendingClaims depends on selectedToken internally
   }, [mode, selectedToken, status]);
+
+  useEffect(() => {
+    if (!initialToken?.draftClaimAll) return;
+    if (mode !== 'unwrap') return;
+    if (pendingClaims.length === 0) return;
+    if (status === 'loading') return;
+    void handleBatchClaim();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional one-shot automation for nix-bot
+  }, [initialToken?.draftClaimAll, mode, pendingClaims.length, status]);
 
   const handleBatchClaim = async () => {
     if (!selectedToken || pendingClaims.length === 0) return;
@@ -208,11 +236,36 @@ export default function WrapUnwrap({ address: _address, privateKey, initialToken
               () => decryptForTx(claim.ctHash, network.chainId, _address, 'withoutPermit'),
               { maxAttempts: 8, baseDelayMs: 1000, maxDelayMs: 5000 }
             );
-            const tx = await wrapper.claimUnshielded(claim.ctHash, res.decryptedValue, res.signature);
-            await tx.wait();
+            let tx;
+            try {
+              tx = await wrapper.claimUnshielded(claim.ctHash, res.decryptedValue, res.signature);
+            } catch (err: unknown) {
+              const errStr = JSON.stringify(err) + String(err);
+              if (errStr.includes('0x646cf558') || errStr.includes('AlreadyClaimed')) {
+                successCount++;
+                continue;
+              }
+              throw err;
+            }
+
+            try {
+              await tx.wait();
+            } catch (err: unknown) {
+              const errStr = JSON.stringify(err) + String(err);
+              if (errStr.includes('0x646cf558') || errStr.includes('AlreadyClaimed')) {
+                successCount++;
+                continue;
+              }
+              throw err;
+            }
             successCount++;
           } catch (claimErr: unknown) {
-            errMap[claim.ctHash] = claimErr instanceof Error ? claimErr.message.slice(0, 80) : 'Claim failed';
+            const errStr = JSON.stringify(claimErr) + String(claimErr);
+            if (errStr.includes('0x646cf558') || errStr.includes('AlreadyClaimed')) {
+              successCount++;
+            } else {
+              errMap[claim.ctHash] = claimErr instanceof Error ? claimErr.message.slice(0, 80) : 'Claim failed';
+            }
           }
         }
       } catch {
@@ -234,6 +287,21 @@ export default function WrapUnwrap({ address: _address, privateKey, initialToken
       await checkPendingClaims();
       fetchBal();
       if (privateBalance) handleDecryptBalance();
+    }
+  };
+
+  const handleClaimSingle = async (ctHash: string) => {
+    if (!selectedToken) return;
+    setClaimingCtHash(ctHash);
+    try {
+      const signer = getSigner(privateKey);
+      const provider = signer.provider!;
+      const wrapperAddr = await getWrapperAddress(provider, selectedToken.address);
+      if (!wrapperAddr) throw new Error('No wrapper found');
+      await handleFinalize(ctHash, wrapperAddr, selectedToken);
+      await checkPendingClaims();
+    } finally {
+      setClaimingCtHash(null);
     }
   };
 
@@ -318,6 +386,9 @@ export default function WrapUnwrap({ address: _address, privateKey, initialToken
       setHashes({ approve: approveTx.hash });
       await approveTx.wait();
 
+      setStatusMsg('Confirming approval on-chain...');
+      await waitForAllowance(signer.provider!, selectedToken.address, _address, wrapperAddress, parsedAmount);
+
       setStatusMsg('Shielding to FHERC20...');
       const wrapper = new ethers.Contract(wrapperAddress, ['function shield(address to, uint256 amount) external returns (bytes32)'], signer);
       wrapTx = await wrapper.shield(_address, parsedAmount);
@@ -379,12 +450,50 @@ export default function WrapUnwrap({ address: _address, privateKey, initialToken
       txStage: 'unshield-requested',
     });
 
-    await reqTx.wait();
-    const claims = await wrapper.getUserClaims(_address);
-    const pending = claims.filter((c: { claimed: boolean }) => !c.claimed);
-    const latest = pending[pending.length - 1];
-    if (!latest) throw new Error('No pending claim found after unshield');
-    await handleFinalize(latest.ctHash, wrapperAddr, selectedToken);
+    const receipt = await reqTx.wait();
+    let pendingCtHash: string | null = null;
+
+    // 1. Try to extract ctHash directly from Unshielded event log
+    try {
+      const topicUnshielded = ethers.id('Unshielded(address,uint256)');
+      for (const log of receipt?.logs || []) {
+        if (
+          log.address.toLowerCase() === wrapperAddr.toLowerCase() &&
+          log.topics[0] === topicUnshielded &&
+          log.topics[2]
+        ) {
+          pendingCtHash = log.topics[2];
+          break;
+        }
+      }
+    } catch (e) {
+      console.warn('Receipt log parsing failed, using fallback:', e);
+    }
+
+    // 2. Fallback to polling getUserClaims to handle RPC node synchronization delay
+    if (!pendingCtHash) {
+      setStatusMsg('Syncing claim with network...');
+      for (let attempt = 0; attempt < 8; attempt++) {
+        try {
+          const claims = await wrapper.getUserClaims(_address);
+          const pending = claims.filter((c: { claimed: boolean }) => !c.claimed);
+          const latest = pending[pending.length - 1];
+          if (latest) {
+            pendingCtHash = latest.ctHash;
+            break;
+          }
+        } catch (err) {
+          // Ignore RPC glitches and retry
+        }
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+      }
+    }
+
+    if (!pendingCtHash) {
+      throw new Error('Claim was created but is not visible yet. Please claim all pending in a few seconds.');
+    }
+
+    await handleFinalize(pendingCtHash, wrapperAddr, selectedToken);
   };
 
   const handleFinalize = async (
@@ -422,7 +531,23 @@ export default function WrapUnwrap({ address: _address, privateKey, initialToken
         ['function claimUnshielded(bytes32,uint64,bytes) external'],
         signer
       );
-      const finTx = await wrapper.claimUnshielded(pendingCtHash, decryptedValue, signature);
+      
+      let finTx;
+      try {
+        finTx = await wrapper.claimUnshielded(pendingCtHash, decryptedValue, signature);
+      } catch (err: unknown) {
+        const errStr = JSON.stringify(err) + String(err);
+        if (errStr.includes('0x646cf558') || errStr.includes('AlreadyClaimed')) {
+          setStatus('success');
+          setStatusMsg('Claim already finalized');
+          await checkPendingClaims();
+          fetchBal();
+          if (privateBalance) handleDecryptBalance();
+          return;
+        }
+        throw err;
+      }
+
       setHashes(prev => ({ ...prev, approve: prev.action, action: finTx.hash }));
 
       const claimedDisplay = ethers.formatUnits(decryptedValue, 6);
@@ -436,7 +561,20 @@ export default function WrapUnwrap({ address: _address, privateKey, initialToken
         requestId: pendingCtHash,
       });
 
-      await finTx.wait();
+      try {
+        await finTx.wait();
+      } catch (err: unknown) {
+        const errStr = JSON.stringify(err) + String(err);
+        if (errStr.includes('0x646cf558') || errStr.includes('AlreadyClaimed')) {
+          setStatus('success');
+          setStatusMsg('Claim already finalized');
+          await checkPendingClaims();
+          fetchBal();
+          if (privateBalance) handleDecryptBalance();
+          return;
+        }
+        throw err;
+      }
       await addActivity({
         id: finTx.hash, type: 'unwrap', amount: `${claimedDisplay} ${token.symbol}`,
         status: 'success', networkId: network.id, address: _address, hash: finTx.hash, isConfidential: true,
@@ -660,9 +798,23 @@ export default function WrapUnwrap({ address: _address, privateKey, initialToken
                 <div className="text-caption font-bold uppercase tracking-widest text-amber-400">
                   {pendingClaims.length} Pending Claim{pendingClaims.length > 1 ? 's' : ''}
                 </div>
-                {batchClaimStatus && (
-                  <div className="text-micro text-amber-400 font-mono">{batchClaimStatus}</div>
-                )}
+                <div className="flex items-center gap-2">
+                  {batchClaimStatus && (
+                    <div className="text-micro text-amber-400 font-mono">{batchClaimStatus}</div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={checkPendingClaims}
+                    disabled={refreshingClaims}
+                    className="inline-flex items-center gap-1 text-micro uppercase tracking-wider text-amber-300 hover:text-amber-200 disabled:opacity-60"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${refreshingClaims ? 'animate-spin' : ''}`} />
+                    Refresh
+                  </button>
+                </div>
+              </div>
+              <div className="mb-3 text-micro text-amber-300/90 font-mono uppercase tracking-wider">
+                Claim assistant: decrypt each pending unshield and finalize claim.
               </div>
               <button
                 onClick={handleBatchClaim}
@@ -672,13 +824,21 @@ export default function WrapUnwrap({ address: _address, privateKey, initialToken
               </button>
               <div className="mt-3 space-y-1">
                 {pendingClaims.map((claim, idx) => (
-                  <div key={claim.ctHash} className="text-micro font-mono text-muted flex items-center justify-between">
-                    <span>Claim #{idx + 1}</span>
+                  <div key={claim.ctHash} className="text-micro font-mono text-muted flex items-center justify-between gap-2">
+                    <span className="shrink-0">Claim #{idx + 1}</span>
                     {claimAttemptErrors[claim.ctHash] ? (
-                      <span className="text-red-400">{claimAttemptErrors[claim.ctHash]}</span>
+                      <span className="text-red-400 truncate">{claimAttemptErrors[claim.ctHash]}</span>
                     ) : (
                       <span className="text-amber-400">Pending</span>
                     )}
+                    <button
+                      type="button"
+                      onClick={() => handleClaimSingle(claim.ctHash)}
+                      disabled={!!claimingCtHash}
+                      className="px-2 py-1 border border-amber-500/30 text-amber-300 hover:bg-amber-500/15 disabled:opacity-50 uppercase tracking-wider"
+                    >
+                      {claimingCtHash === claim.ctHash ? 'Claiming...' : 'Claim now'}
+                    </button>
                   </div>
                 ))}
               </div>

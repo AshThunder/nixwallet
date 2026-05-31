@@ -11,11 +11,11 @@ import SendScreen from './screens/Send';
 import SettingsScreen from './screens/Settings';
 import ManageTokens from './screens/ManageTokens';
 import Receive from './screens/Receive';
-import SwapScreen from './screens/Swap';
 import DappsScreen from './screens/Dapps';
+import NixBotScreen from './screens/NixBot';
 import DappRequestApprovalOverlay from './components/DappRequestApprovalOverlay';
 
-type Screen = 'loading' | 'onboarding' | 'unlock' | 'dashboard' | 'wrap' | 'send' | 'receive' | 'settings' | 'manage-tokens' | 'swap' | 'dapps';
+type Screen = 'loading' | 'onboarding' | 'unlock' | 'dashboard' | 'wrap' | 'send' | 'receive' | 'settings' | 'manage-tokens' | 'dapps' | 'nix-bot';
 type TransactionToast = {
   id: number;
   title: string;
@@ -38,6 +38,10 @@ function App() {
     address: string;
     decimals?: number;
     sendMode?: 'public' | 'private';
+    draftRecipient?: string;
+    draftAmount?: string;
+    draftMode?: 'wrap' | 'unwrap';
+    draftClaimAll?: boolean;
   } | null>(null);
 
   const handleUnlock = useCallback(async (data: VaultData) => {
@@ -277,12 +281,18 @@ function App() {
     return withRequestOverlay(<Receive address={address} onBack={() => setScreen('dashboard')} />);
   }
 
-  if (screen === 'swap') {
-    return withRequestOverlay(<SwapScreen onBack={() => setScreen('dashboard')} />);
-  }
-
   if (screen === 'dapps') {
     return withRequestOverlay(<DappsScreen onBack={() => setScreen('settings')} address={address} privateKey={privateKey} onNetworkChange={handleNetworkChange} />);
+  }
+
+  if (screen === 'nix-bot') {
+    return withRequestOverlay(
+      <NixBotScreen
+        address={address}
+        privateKey={privateKey}
+        onBack={() => setScreen('dashboard')}
+      />
+    );
   }
 
   if (screen === 'settings') {

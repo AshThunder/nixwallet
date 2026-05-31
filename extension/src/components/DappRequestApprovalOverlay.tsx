@@ -44,6 +44,7 @@ function formatMethod(method: string) {
     case 'eth_sendTransaction':
       return 'Confirm Transaction';
     case 'wallet_switchEthereumChain':
+    case 'wallet_addEthereumChain':
       return 'Switch Network';
     default:
       return method;
@@ -132,7 +133,7 @@ function RequestDetails({ request, address }: { request: PendingProviderRequest;
   const tx = getTxParams(request);
   const data = typeof tx?.data === 'string' ? tx.data : undefined;
   const decoded = describeCallData(data);
-  const requestedChain = request.method === 'wallet_switchEthereumChain'
+  const requestedChain = (request.method === 'wallet_switchEthereumChain' || request.method === 'wallet_addEthereumChain')
     ? (request.params?.[0] as { chainId?: string } | undefined)?.chainId
     : null;
   const requestedNetwork = requestedChain ? getNetworkByChainId(Number.parseInt(requestedChain, 16)) : null;
@@ -162,7 +163,7 @@ function RequestDetails({ request, address }: { request: PendingProviderRequest;
         </div>
       )}
 
-      {request.method === 'wallet_switchEthereumChain' && (
+      {(request.method === 'wallet_switchEthereumChain' || request.method === 'wallet_addEthereumChain') && (
         <div className="bg-app border border-ui p-3 space-y-2">
           <Row label="Switch to" value={requestedNetwork ? `${requestedNetwork.name} (${requestedNetwork.chainId})` : requestedChain || 'Unknown chain'} />
         </div>

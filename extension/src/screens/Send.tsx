@@ -12,7 +12,14 @@ import TokenIcon from '../components/TokenIcon';
 interface Props {
   address: string;
   privateKey: string;
-  initialToken?: { symbol: string; address: string; decimals?: number; sendMode?: 'public' | 'private' } | null;
+  initialToken?: {
+    symbol: string;
+    address: string;
+    decimals?: number;
+    sendMode?: 'public' | 'private';
+    draftRecipient?: string;
+    draftAmount?: string;
+  } | null;
   onBack: () => void;
 }
 
@@ -21,8 +28,8 @@ type Status = 'idle' | 'loading' | 'success' | 'error';
 
 export default function SendScreen({ address: _addr, privateKey, initialToken, onBack }: Props) {
   const [sendMode, setSendMode] = useState<SendMode>(initialToken?.sendMode ?? 'public');
-  const [recipient, setRecipient] = useState('');
-  const [amount, setAmount] = useState('');
+  const [recipient, setRecipient] = useState(initialToken?.draftRecipient ?? '');
+  const [amount, setAmount] = useState(initialToken?.draftAmount ?? '');
   const [status, setStatus] = useState<Status>('idle');
   const [statusMsg, setStatusMsg] = useState('');
   const [txHash, setTxHash] = useState<string | null>(null);
@@ -44,7 +51,9 @@ export default function SendScreen({ address: _addr, privateKey, initialToken, o
 
   useEffect(() => {
     setSendMode(initialToken?.sendMode ?? 'public');
-  }, [initialToken?.address, initialToken?.sendMode]);
+    setRecipient(initialToken?.draftRecipient ?? '');
+    setAmount(initialToken?.draftAmount ?? '');
+  }, [initialToken?.address, initialToken?.sendMode, initialToken?.draftRecipient, initialToken?.draftAmount]);
 
   useEffect(() => {
     if (isNativeETH) {

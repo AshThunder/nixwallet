@@ -2,9 +2,10 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Shield, ArrowRightLeft, ArrowUpRight, ArrowDownRight,
-  Lock, Copy, Check, Settings, LogOut, RefreshCw, Eye, Loader2, X, ExternalLink, ChevronDown, Plus, AlertCircle,
+  Lock, Copy, Check, Settings, LogOut, RefreshCw, Eye, Loader2, X, ExternalLink, ChevronDown, Plus, AlertCircle, Bot,
 } from 'lucide-react';
 import TokenIcon from '../components/TokenIcon';
+import ChainIcon from '../components/ChainIcon';
 import TestnetFaucetLink from '../components/TestnetFaucetLink';
 import { getNativeEthFaucetUrl, getStablecoinFaucetUrl } from '../lib/testnetFaucets';
 import { mergePrivateBalancesOnFetch, resetPrivateBalanceState } from '../lib/privateBalanceState';
@@ -259,6 +260,17 @@ export default function Dashboard({
     if (typeof value !== 'number' || !Number.isFinite(value)) return '--';
     return value.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 2 });
   };
+
+  const formatStageLabel = (txStage?: string): string => {
+    if (!txStage) return '';
+    const stage = txStage.toLowerCase();
+    if (stage.includes('awaiting-receipt')) return 'awaiting receipt';
+    if (stage.includes('confirmation-timeout')) return 'confirmation timeout';
+    if (stage.includes('confirmation-error')) return 'confirmation error';
+    if (stage.includes('confirmed')) return 'confirmed on-chain';
+    if (stage.includes('reverted')) return 'reverted on-chain';
+    return txStage.replaceAll('-', ' ');
+  };
   
   const customHybridTokens = [
     ...customMetadata
@@ -323,7 +335,7 @@ export default function Dashboard({
             onClick={() => setShowNetworkPicker((prev) => !prev)}
             className="px-3 py-1 bg-surface border-l-2 border-brand-cyan text-label-caps text-brand-cyan flex items-center gap-2 hover:bg-brand-cyan/5 transition-colors"
           >
-            <div className="w-1.5 h-1.5 bg-brand-cyan animate-pulse" />
+            <ChainIcon networkId={network.id} className="w-3.5 h-3.5 shrink-0" />
             {network.name}
             <ChevronDown className={`w-3 h-3 transition-transform ${showNetworkPicker ? 'rotate-180' : ''}`} />
           </button>
@@ -333,7 +345,7 @@ export default function Dashboard({
                 initial={{ opacity: 0, y: -6 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -6 }}
-                className="absolute right-0 top-full mt-2 z-[100] w-44 bg-app border border-ui shadow-card"
+                className="absolute right-0 top-full mt-2 z-[100] w-48 bg-app border border-ui shadow-card"
               >
                 {(Object.keys(FHENIX_NETWORKS) as NetworkId[]).map((id) => {
                   const n = FHENIX_NETWORKS[id];
@@ -345,11 +357,12 @@ export default function Dashboard({
                         onNetworkChange?.(id);
                         setShowNetworkPicker(false);
                       }}
-                      className={`w-full text-left px-3 py-2 border-b border-ui last:border-b-0 text-xs uppercase tracking-wider transition-colors ${
+                      className={`w-full text-left px-3 py-2.5 border-b border-ui last:border-b-0 text-xs uppercase tracking-wider transition-colors flex items-center gap-2.5 ${
                         active ? 'text-brand-cyan bg-brand-cyan/10' : 'text-sub bg-app hover:text-main hover:bg-input-field'
                       }`}
                     >
-                      {n.name}
+                      <ChainIcon networkId={n.id} className="w-4 h-4 shrink-0" />
+                      <span>{n.name}</span>
                     </button>
                   );
                 })}
@@ -421,25 +434,26 @@ export default function Dashboard({
               <span className="text-label-caps">Send</span>
             </button>
             <button
-              onClick={() => setShowTokenPicker({ open: true, action: 'wrap' })}
+              onClick={() => onNavigate('receive')}
               className="bg-input-field hover:bg-brand-cyan hover:text-brand-midnight transition-all py-3 flex flex-col items-center gap-1 group border-l border-ui"
+            >
+              <ArrowDownRight className="w-4 h-4 text-brand-cyan group-hover:text-brand-midnight transition-colors" />
+              <span className="text-label-caps">Receive</span>
+            </button>
+            <button
+              onClick={() => setShowTokenPicker({ open: true, action: 'wrap' })}
+              className="bg-input-field hover:bg-brand-cyan hover:text-brand-midnight transition-all py-3 flex flex-col items-center gap-1 group border-t border-ui"
             >
               <ArrowRightLeft className="w-4 h-4 text-brand-cyan group-hover:text-brand-midnight transition-colors" />
               <span className="text-label-caps">Wrap/Unwrap</span>
             </button>
             <button
-              onClick={() => onNavigate('swap')}
-              className="bg-input-field hover:bg-brand-cyan hover:text-brand-midnight transition-all py-3 flex flex-col items-center gap-1 group border-t border-ui"
+              onClick={() => onNavigate('nix-bot')}
+              className="bg-brand-cyan/10 hover:bg-brand-cyan/20 text-brand-cyan transition-all py-3 flex flex-col items-center gap-1 group border border-brand-cyan relative overflow-hidden"
             >
-              <RefreshCw className="w-4 h-4 text-brand-cyan group-hover:text-brand-midnight transition-colors" />
-              <span className="text-label-caps">Swap</span>
-            </button>
-            <button
-              onClick={() => onNavigate('receive')}
-              className="bg-input-field hover:bg-brand-cyan hover:text-brand-midnight transition-all py-3 flex flex-col items-center gap-1 group border-t border-l border-ui"
-            >
-              <ArrowDownRight className="w-4 h-4 text-brand-cyan group-hover:text-brand-midnight transition-colors" />
-              <span className="text-label-caps">Receive</span>
+              <div className="absolute top-0 right-0 w-8 h-8 bg-brand-cyan/10 rounded-full blur-md opacity-50 pointer-events-none group-hover:bg-brand-cyan/20 transition-all" />
+              <Bot className="w-4 h-4 text-brand-cyan group-hover:scale-110 group-hover:rotate-6 transition-transform duration-300" />
+              <span className="text-label-caps text-main font-bold tracking-wider">Nix Bot</span>
             </button>
           </div>
         </motion.div>
@@ -769,7 +783,7 @@ export default function Dashboard({
                                 {act.status === 'pending' ? 'confirming' : act.status}
                               </span>
                               {act.txStage && (
-                                <span className="text-micro uppercase tracking-wider text-muted">{act.txStage.replaceAll('-', ' ')}</span>
+                                <span className="text-micro uppercase tracking-wider text-muted">{formatStageLabel(act.txStage)}</span>
                               )}
                               {act.hash && network.explorer && (
                                 <a
@@ -909,7 +923,13 @@ export default function Dashboard({
                   {selectedActivity.txStage && (
                     <div className="flex justify-between items-center">
                       <span className="text-muted">Stage</span>
-                      <span className="text-main font-mono text-caption">{selectedActivity.txStage}</span>
+                      <span className="text-main font-mono text-caption">{formatStageLabel(selectedActivity.txStage)}</span>
+                    </div>
+                  )}
+                  {selectedActivity.requestId && (
+                    <div className="flex justify-between items-center gap-2">
+                      <span className="text-muted shrink-0">Request Ref</span>
+                      <span className="text-main font-mono text-caption truncate max-w-[180px] text-right">{selectedActivity.requestId}</span>
                     </div>
                   )}
                   <div className="flex justify-between items-center gap-2">
@@ -961,7 +981,7 @@ export default function Dashboard({
       {/* Token Picker Modal */}
       <AnimatePresence>
         {showTokenPicker.open && (
-          <div className="absolute inset-0 z-[100] flex flex-col justify-end bg-brand-midnight/80 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[100] flex flex-col justify-end bg-brand-midnight/80 backdrop-blur-sm">
             <motion.div
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
@@ -1025,11 +1045,6 @@ export default function Dashboard({
                     </div>
                     <div className="text-right">
                       <div className="font-brand font-bold text-sm">{token.balance}</div>
-                      {showTokenPicker.action === 'wrap' && (
-                        <div className="text-micro font-bold uppercase tracking-widest text-brand-cyan">
-                          FHERC20
-                        </div>
-                      )}
                     </div>
                   </button>
                 ))}

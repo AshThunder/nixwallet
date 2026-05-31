@@ -2,7 +2,7 @@
 
 **Standard wallets don’t support confidential tokens — every balance and transfer is a billboard on a public chain.** 
 
-Introducing **NixWallet**: a self-custodial browser extension wallet to manage your confidential assets. Wrap everyday ERC-20s into **FHERC20** confidential assets, send **encrypted amounts** with Fhenix **coFHE**, connect to external dApps via the injected provider (EIP-1193 / EIP-6963) or WalletConnect, keep the wallet one click away in the **side panel**, and use **NixBot**—an automated conversational assistant that parses natural language into private on-chain actions.
+Introducing **NixWallet**: a self-custodial wallet to manage your confidential assets. Wrap everyday ERC-20s into **FHERC20** confidential assets, send **encrypted amounts** with Fhenix **coFHE**, connect to external dApps via the injected provider (EIP-1193 / EIP-6963) or WalletConnect, keep the wallet one click away in the **side panel**, and use **NixBot**—an automated conversational assistant that parses natural language into private on-chain actions.
 
 **Companion dApp:** [nixwalletdapp.vercel.app](https://nixwalletdapp.vercel.app) — a hosted reference site that shows how **any external dApp** can interact with NixWallet through the injected provider (EIP-1193 / EIP-6963) or WalletConnect, without building its own signing or approval UI.
 

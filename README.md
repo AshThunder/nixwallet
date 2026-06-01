@@ -17,8 +17,10 @@ Built for the **Fhenix** stack and **Fully Homomorphic Encryption (FHE)** — sh
 [![Install NixWallet on Chrome Web Store](https://img.shields.io/badge/Chrome%20Web%20Store-Install%20NixWallet-4285F4?logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/nixwallet/nkkaidapildbkjmnfeieepmejghgmipi)
 
 ##  Version 1.0.5 (latest) pending chrome web store review, use local setup to test the latest version of NixWallet (Version 1.0.5)
----
+
 **[LOCAL_SETUP.md](./extension/LOCAL_SETUP.md)**
+
+---
 
 ## Why we built this
 

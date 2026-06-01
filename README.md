@@ -18,6 +18,7 @@ Built for the **Fhenix** stack and **Fully Homomorphic Encryption (FHE)** — sh
 
 ##  Version 1.0.5 (latest) pending chrome web store review, use local setup to test the latest version of NixWallet (Version 1.0.5)
 ---
+**[LOCAL_SETUP.md](./extension/LOCAL_SETUP.md)**
 
 ## Why we built this
 
